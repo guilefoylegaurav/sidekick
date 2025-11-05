@@ -3,6 +3,22 @@ const userInput = document.getElementById('user-input');
 const sendButton = document.getElementById('send-button');
 
 let pageContent = "";
+let currentTabId = null;
+
+// Get current tab ID and load tab-specific data
+chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  if (tabs[0]) {
+    currentTabId = tabs[0].id;
+    loadTabData();
+  }
+});
+
+function loadTabData() {
+  chrome.storage.local.get([`messages_${currentTabId}`], (result) => {
+    const savedMessages = result[`messages_${currentTabId}`] || [];
+    savedMessages.forEach(msg => displayMessage(msg.content, msg.sender, false));
+  });
+}
 
 // Request page content when the side panel loads
 window.addEventListener('load', () => {
@@ -61,13 +77,12 @@ I am an AI, and I'm still learning!`;
   displayMessage(llmResponse, 'llm');
 }
 
-function displayMessage(message, sender) {
+function displayMessage(message, sender, save = true) {
   const messageElement = document.createElement('div');
   messageElement.classList.add('message', sender);
   
   if (sender === 'llm') {
     messageElement.innerHTML = formatMessageWithCode(message);
-    // Add event listeners for copy buttons
     messageElement.querySelectorAll('.copy-btn').forEach(btn => {
       btn.addEventListener('click', copyCode);
     });
@@ -77,6 +92,18 @@ function displayMessage(message, sender) {
   
   messagesDiv.appendChild(messageElement);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  
+  if (save && currentTabId) {
+    saveMessage(message, sender);
+  }
+}
+
+function saveMessage(content, sender) {
+  chrome.storage.local.get([`messages_${currentTabId}`], (result) => {
+    const messages = result[`messages_${currentTabId}`] || [];
+    messages.push({ content, sender });
+    chrome.storage.local.set({ [`messages_${currentTabId}`]: messages });
+  });
 }
 
 function formatMessageWithCode(message) {

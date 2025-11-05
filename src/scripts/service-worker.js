@@ -1,10 +1,10 @@
 chrome.action.onClicked.addListener(async (tab) => {
-  // Ensure the side panel opens for the current tab
-  await chrome.sidePanel.open({ tabId: tab.id });
   await chrome.sidePanel.setOptions({
     tabId: tab.id,
-    path: "sidepanel.html"
+    path: "src/pages/sidepanel.html",
+    enabled: true
   });
+  await chrome.sidePanel.open({ tabId: tab.id });
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
