@@ -1,0 +1,26 @@
+{
+  "name": "Sidekick",
+  "version": "0.1.0",
+  "description": "Browsing experience sidekick",
+  "permissions": ["sidePanel", "storage", "tabs", "activeTab", "scripting"],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/scripts/contentScript.js"
+      ]
+    }
+  ],
+  "action": {
+    "default_title": "Sidekick"
+  },
+  "side_panel": {
+    "default_path": "src/pages/sidepanel.html"
+  },
+  "background": {
+    "service_worker": "src/scripts/service-worker.js"
+  },
+  "manifest_version": 3
+}
