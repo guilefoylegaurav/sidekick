@@ -5,7 +5,7 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   background: #000000;
   color: #ffffff;
   height: 100vh;
@@ -197,4 +197,56 @@ body {
 
 #send-button:hover {
   background: #f0f0f0;
+}
+
+.code-block {
+  position: relative;
+  margin: 12px 0;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  font-size: 12px;
+  color: #7d8590;
+}
+
+.code-content {
+  padding: 16px;
+  font-family: 'Roboto Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #e6edf3;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.copy-btn {
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #f0f6fc;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.copy-btn:hover {
+  background: #30363d;
+  border-color: #484f58;
+}
+
+.copy-btn.copied {
+  background: #238636;
+  border-color: #238636;
+  color: #ffffff;
 }

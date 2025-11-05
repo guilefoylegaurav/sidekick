@@ -38,7 +38,24 @@ async function getLLMResponse(userMessage) {
   await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
   
   // In a real scenario, you would send pageContent and userMessage to your LLM API
-  const llmResponse = `You said: "${userMessage}".\n\nPage context (first 100 chars): ${pageContent.substring(0, 100)}...\n\nI am an AI, and I'm still learning!`;
+  const llmResponse = `You said: "${userMessage}".
+
+Here's a code example:
+
+\`\`\`javascript
+function greet(name) {
+  console.log(\`Hello, \${name}!\`);
+  return \`Welcome, \${name}\`;
+}
+
+greet("World");
+\`\`\`
+
+You can also use inline code like \`console.log()\` in your messages.
+
+Page context (first 100 chars): ${pageContent.substring(0, 100)}...
+
+I am an AI, and I'm still learning!`;
   
   hideLoading();
   displayMessage(llmResponse, 'llm');
@@ -47,9 +64,59 @@ async function getLLMResponse(userMessage) {
 function displayMessage(message, sender) {
   const messageElement = document.createElement('div');
   messageElement.classList.add('message', sender);
-  messageElement.textContent = message;
+  
+  if (sender === 'llm') {
+    messageElement.innerHTML = formatMessageWithCode(message);
+    // Add event listeners for copy buttons
+    messageElement.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', copyCode);
+    });
+  } else {
+    messageElement.textContent = message;
+  }
+  
   messagesDiv.appendChild(messageElement);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function formatMessageWithCode(message) {
+  // Replace code blocks (```language\ncode\n```) with formatted HTML
+  return message.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, language, code) => {
+    const lang = language || 'text';
+    const codeId = 'code-' + Math.random().toString(36).substr(2, 9);
+    return `
+      <div class="code-block">
+        <div class="code-header">
+          <span>${lang}</span>
+          <button class="copy-btn" data-code-id="${codeId}">Copy</button>
+        </div>
+        <div class="code-content" id="${codeId}">${escapeHtml(code.trim())}</div>
+      </div>
+    `;
+  }).replace(/`([^`]+)`/g, '<code style="background: #161b22; padding: 2px 4px; border-radius: 3px; font-family: \'Roboto Mono\', monospace;">$1</code>');
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function copyCode(event) {
+  const btn = event.target;
+  const codeId = btn.getAttribute('data-code-id');
+  const codeElement = document.getElementById(codeId);
+  
+  if (codeElement) {
+    navigator.clipboard.writeText(codeElement.textContent).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
 }
 
 function showLoading() {
