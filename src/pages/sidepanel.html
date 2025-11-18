@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Sidekick Chat</title>
+  <title>not clippy</title>
   <link rel="stylesheet" href="../styles/sidepanel.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,13 +11,23 @@
   <div id="app">
     <header id="header">
       <div class="header-content">
-        <h1>sidekick</h1>
+        <div class="header-logo">
+          <img src="../icons/icon.png" alt="not clippy" class="logo-icon">
+          <h1>not clippy</h1>
+        </div>
         <div class="status-indicator"></div>
       </div>
     </header>
     
     <div id="chat-container">
       <div id="messages"></div>
+      
+      <div id="quick-actions">
+        <button class="quick-action-btn" data-prompt="Give me a gist of this page">Give me a gist</button>
+        <button class="quick-action-btn" data-prompt="Fact check">Fact check</button>
+        <button class="quick-action-btn" data-prompt="Quiz me on this article">Quiz me on this article</button>
+        <button class="quick-action-btn" data-prompt="Find me similar articles to read">Find me similar articles to read</button>
+      </div>
       
       <div id="input-container">
         <div class="input-wrapper">

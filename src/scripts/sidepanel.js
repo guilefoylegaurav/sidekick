@@ -5,6 +5,19 @@ const sendButton = document.getElementById('send-button');
 let pageContent = "";
 let currentTabId = null;
 
+const emptyCTAs = [
+  "What's the story here?",
+  "Surprise me with insights",
+  "Break this down for me",
+  "Give me the TL;DR", 
+  "Spill the tea ☕",
+  "What's the plot twist?",
+  "Make this make sense",
+  "What am I missing?",
+  "Connect the dots",
+  "Be my reading buddy"
+];
+
 // Get current tab ID and load tab-specific data
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   if (tabs[0]) {
@@ -13,11 +26,44 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
   }
 });
 
+// Add event listeners for quick action buttons
+document.addEventListener('DOMContentLoaded', () => {
+  const quickActionButtons = document.querySelectorAll('.quick-action-btn');
+  quickActionButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const prompt = button.getAttribute('data-prompt');
+      if (prompt) {
+        // Set the prompt in the input field and trigger send
+        userInput.value = prompt;
+        sendMessage();
+      }
+    });
+  });
+});
+
 function loadTabData() {
   chrome.storage.local.get([`messages_${currentTabId}`], (result) => {
     const savedMessages = result[`messages_${currentTabId}`] || [];
     savedMessages.forEach(msg => displayMessage(msg.content, msg.sender, false));
+    
+    if (savedMessages.length === 0) {
+      showEmptyState();
+    }
   });
+}
+
+function showEmptyState() {
+  const randomCTA = emptyCTAs[Math.floor(Math.random() * emptyCTAs.length)];
+  const emptyElement = document.createElement('div');
+  emptyElement.classList.add('empty-state');
+  emptyElement.innerHTML = `
+    <div class="empty-content">
+      <div class="empty-icon">💭</div>
+      <p class="empty-message">${randomCTA}</p>
+      <p class="empty-subtitle">Ask me anything about this page</p>
+    </div>
+  `;
+  messagesDiv.appendChild(emptyElement);
 }
 
 // Request page content when the side panel loads
@@ -42,9 +88,17 @@ userInput.addEventListener('keypress', (event) => {
 function sendMessage() {
   const message = userInput.value.trim();
   if (message) {
+    clearEmptyState();
     displayMessage(message, 'user');
     userInput.value = '';
     getLLMResponse(message);
+  }
+}
+
+function clearEmptyState() {
+  const emptyState = document.querySelector('.empty-state');
+  if (emptyState) {
+    emptyState.remove();
   }
 }
 

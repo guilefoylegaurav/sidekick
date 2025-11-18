@@ -1,5 +1,5 @@
 {
-  "name": "Sidekick",
+  "name": "not clippy",
   "version": "0.1.0",
   "description": "Browsing experience sidekick",
   "permissions": ["sidePanel", "storage", "tabs", "activeTab", "scripting"],
@@ -14,7 +14,13 @@
     }
   ],
   "action": {
-    "default_title": "Sidekick"
+    "default_title": "not clippy",
+    "default_icon": "src/icons/icon.png"
+  },
+  "icons": {
+    "16": "src/icons/icon.png",
+    "48": "src/icons/icon.png",
+    "128": "src/icons/icon.png"
   },
   "side_panel": {
     "default_path": "src/pages/sidepanel.html"
