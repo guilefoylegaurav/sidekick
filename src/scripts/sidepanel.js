@@ -58,7 +58,11 @@ function showEmptyState() {
   emptyElement.classList.add('empty-state');
   emptyElement.innerHTML = `
     <div class="empty-content">
-      <div class="empty-icon">💭</div>
+      <div class="empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
       <p class="empty-message">${randomCTA}</p>
       <p class="empty-subtitle">Ask me anything about this page</p>
     </div>
