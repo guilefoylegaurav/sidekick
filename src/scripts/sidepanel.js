@@ -48,6 +48,8 @@ function loadTabData() {
     
     if (savedMessages.length === 0) {
       showEmptyState();
+    } else {
+      hideQuickActions();
     }
   });
 }
@@ -93,6 +95,7 @@ function sendMessage() {
   const message = userInput.value.trim();
   if (message) {
     clearEmptyState();
+    hideQuickActions();
     displayMessage(message, 'user');
     userInput.value = '';
     getLLMResponse(message);
@@ -104,6 +107,39 @@ function clearEmptyState() {
   if (emptyState) {
     emptyState.remove();
   }
+}
+
+function hideQuickActions() {
+  const quickActions = document.getElementById('quick-actions');
+  if (quickActions) {
+    quickActions.classList.add('hidden');
+  }
+}
+
+function scrollToBottom() {
+  // Use setTimeout to ensure DOM has fully updated
+  setTimeout(() => {
+    console.log('Scrolling to bottom...', {
+      messagesHeight: messagesDiv.scrollHeight,
+      messagesTop: messagesDiv.scrollTop,
+      messagesClientHeight: messagesDiv.clientHeight
+    });
+    
+    // Try scrolling the messages container
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    // Also try scrolling the chat container
+    const chatContainer = document.getElementById('chat-container');
+    if (chatContainer) {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+    
+    // Try scrolling the body as well
+    document.body.scrollTop = document.body.scrollHeight;
+    document.documentElement.scrollTop = document.documentElement.scrollHeight;
+    
+    console.log('After scroll attempt:', messagesDiv.scrollTop);
+  }, 100);
 }
 
 async function getLLMResponse(userMessage) {
@@ -149,7 +185,7 @@ function displayMessage(message, sender, save = true) {
   }
   
   messagesDiv.appendChild(messageElement);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  scrollToBottom();
   
   if (save && currentTabId) {
     saveMessage(message, sender);
@@ -210,7 +246,7 @@ function showLoading() {
   loadingElement.innerHTML = '<div class="horizontal-loader"></div>';
   loadingElement.id = 'loading-indicator';
   messagesDiv.appendChild(loadingElement);
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  scrollToBottom();
 }
 
 function hideLoading() {
