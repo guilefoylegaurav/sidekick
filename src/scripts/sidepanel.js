@@ -10,7 +10,7 @@ const emptyCTAs = [
   "Surprise me with insights",
   "Break this down for me",
   "Give me the TL;DR", 
-  "Spill the tea ☕",
+  "Spill the tea!",
   "What's the plot twist?",
   "Make this make sense",
   "What am I missing?",
@@ -109,6 +109,14 @@ userInput.addEventListener('keypress', (event) => {
   }
 });
 
+// Add clear button functionality
+document.addEventListener('DOMContentLoaded', () => {
+  const clearButton = document.getElementById('clear-button');
+  if (clearButton) {
+    clearButton.addEventListener('click', clearConversation);
+  }
+});
+
 function sendMessage() {
   const message = userInput.value.trim();
   if (message) {
@@ -131,6 +139,24 @@ function hideQuickActions() {
   const quickActions = document.getElementById('quick-actions');
   if (quickActions) {
     quickActions.classList.add('hidden');
+  }
+}
+
+function clearConversation() {
+  // Confirm with user before clearing
+  if (confirm('Are you sure you want to clear this conversation?')) {
+    // Clear messages from UI
+    messagesDiv.innerHTML = '';
+    
+    // Clear messages from storage
+    if (currentTabId) {
+      chrome.storage.local.remove(`messages_${currentTabId}`, () => {
+        console.log('Conversation cleared for tab:', currentTabId);
+      });
+    }
+    
+    // Show empty state and quick actions
+    showEmptyState();
   }
 }
 
