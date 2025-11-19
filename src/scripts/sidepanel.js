@@ -19,11 +19,25 @@ const emptyCTAs = [
 ];
 
 // Get current tab ID and load tab-specific data
-chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-  if (tabs[0]) {
-    currentTabId = tabs[0].id;
-    loadTabData();
-  }
+function getCurrentTabAndLoadData() {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs[0]) {
+      currentTabId = tabs[0].id;
+      loadTabData();
+    }
+  });
+}
+
+// Load data when side panel opens
+getCurrentTabAndLoadData();
+
+// Listen for tab activation to handle switching between tabs
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  // Update current tab ID when a new tab is activated
+  currentTabId = activeInfo.tabId;
+  // Clear current messages and load data for the new tab
+  messagesDiv.innerHTML = '';
+  loadTabData();
 });
 
 // Add event listeners for quick action buttons
@@ -70,6 +84,10 @@ function showEmptyState() {
     </div>
   `;
   messagesDiv.appendChild(emptyElement);
+  const quickActions = document.getElementById('quick-actions');
+  if (quickActions) {
+    quickActions.classList.remove('hidden');
+  }
 }
 
 // Request page content when the side panel loads
@@ -117,29 +135,16 @@ function hideQuickActions() {
 }
 
 function scrollToBottom() {
-  // Use setTimeout to ensure DOM has fully updated
-  setTimeout(() => {
-    console.log('Scrolling to bottom...', {
-      messagesHeight: messagesDiv.scrollHeight,
-      messagesTop: messagesDiv.scrollTop,
-      messagesClientHeight: messagesDiv.clientHeight
-    });
-    
-    // Try scrolling the messages container
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    
-    // Also try scrolling the chat container
-    const chatContainer = document.getElementById('chat-container');
-    if (chatContainer) {
-      chatContainer.scrollTop = chatContainer.scrollHeight;
+  const scroll = () => {
+
+    const lastElement = messagesDiv.lastElementChild;
+    if (lastElement) {
+      lastElement.scrollIntoView({ block: 'end' });
     }
-    
-    // Try scrolling the body as well
-    document.body.scrollTop = document.body.scrollHeight;
-    document.documentElement.scrollTop = document.documentElement.scrollHeight;
-    
-    console.log('After scroll attempt:', messagesDiv.scrollTop);
-  }, 100);
+
+  };
+
+  scroll();
 }
 
 async function getLLMResponse(userMessage) {
