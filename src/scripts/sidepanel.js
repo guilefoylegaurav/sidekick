@@ -55,9 +55,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// Helper function to get saved messages from storage
+function getSavedMessages() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([`messages_${currentTabId}`], (result) => {
+      resolve(result[`messages_${currentTabId}`] || []);
+    });
+  });
+}
+
 function loadTabData() {
-  chrome.storage.local.get([`messages_${currentTabId}`], (result) => {
-    const savedMessages = result[`messages_${currentTabId}`] || [];
+  getSavedMessages().then((savedMessages) => {
     savedMessages.forEach(msg => displayMessage(msg.content, msg.sender, false));
     
     if (savedMessages.length === 0) {
@@ -92,6 +100,13 @@ function showEmptyState() {
 
 // Request page content when the side panel loads
 window.addEventListener('load', () => {
+  // Verify marked.js is loaded
+  if (typeof marked !== 'undefined') {
+    console.log('marked.js loaded successfully');
+  } else {
+    console.error('marked.js failed to load');
+  }
+  
   chrome.runtime.sendMessage({ action: "requestPageContent" }, (response) => {
     if (response && response.content) {
       pageContent = response.content;
@@ -176,44 +191,70 @@ function scrollToBottom() {
 async function getLLMResponse(userMessage) {
   // Show loading animation
   showLoading();
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
   
-  // In a real scenario, you would send pageContent and userMessage to your LLM API
-  const llmResponse = `You said: "${userMessage}".
-
-Here's a code example:
-
-\`\`\`javascript
-function greet(name) {
-  console.log(\`Hello, \${name}!\`);
-  return \`Welcome, \${name}\`;
-}
-
-greet("World");
-\`\`\`
-
-You can also use inline code like \`console.log()\` in your messages.
-
-Page context (first 100 chars): ${pageContent.substring(0, 100)}...
-
-I am an AI, and I'm still learning!`;
-  
-  hideLoading();
-  displayMessage(llmResponse, 'llm');
+  try {
+    // Get all prior messages from storage using the helper function
+    const messages = await getSavedMessages();
+    
+    // Build the prompt with page context and conversation history using an array
+    const promptParts = [];
+    
+    // Add page context if available
+    if (pageContent) {
+      promptParts.push(`Page Context:\n${pageContent}\n`);
+    }
+    
+    // Add conversation history
+    if (messages.length > 0) {
+      promptParts.push('Conversation History:');
+      messages.forEach(msg => {
+        const role = msg.sender === 'user' ? 'User' : 'Assistant';
+        promptParts.push(`${role}: ${msg.content}`);
+      });
+    }
+    
+    // Add the current user message
+    promptParts.push(`User: ${userMessage}`);
+    
+    const prompt = promptParts.join('\n');
+    
+    // Make POST request to the API endpoint
+    const response = await fetch('http://localhost:3000/api/get_llm_response', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+      body: JSON.stringify({
+        prompt: prompt
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    const llmResponse = data.response || data.message || JSON.stringify(data);
+    
+    hideLoading();
+    displayMessage(llmResponse, 'llm');
+  } catch (error) {
+    hideLoading();
+    console.error('Error getting LLM response:', error);
+    displayMessage(`Sorry, I encountered an error: ${error.message}. Please make sure the API server is running at localhost:3000.`, 'llm');
+  }
 }
 
 function displayMessage(message, sender, save = true) {
   const messageElement = document.createElement('div');
   messageElement.classList.add('message', sender);
   
-  if (sender === 'llm') {
-    messageElement.innerHTML = formatMessageWithCode(message);
-    messageElement.querySelectorAll('.copy-btn').forEach(btn => {
-      btn.addEventListener('click', copyCode);
-    });
-  } else {
-    messageElement.textContent = message;
-  }
+  // Format markdown for both user and LLM messages
+  messageElement.innerHTML = formatMessageWithCode(message);
+  messageElement.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', copyCode);
+  });
   
   messagesDiv.appendChild(messageElement);
   scrollToBottom();
@@ -232,20 +273,32 @@ function saveMessage(content, sender) {
 }
 
 function formatMessageWithCode(message) {
-  // Replace code blocks (```language\ncode\n```) with formatted HTML
-  return message.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, language, code) => {
+  // Check if marked is available
+  if (typeof marked === 'undefined') {
+    console.warn('marked.js not loaded, using basic formatting');
+    return escapeHtml(message).replace(/\n/g, '<br>');
+  }
+  
+  // Parse markdown using marked.js
+  let html = marked.parse(message);
+  
+  // Post-process code blocks to add our custom wrapper with copy button
+  html = html.replace(/<pre><code(?:\s+class="language-(\w+)")?>([\s\S]*?)<\/code><\/pre>/g, (match, language, code) => {
     const lang = language || 'text';
     const codeId = 'code-' + Math.random().toString(36).substr(2, 9);
+    const escapedCode = escapeHtml(code.trim());
     return `
       <div class="code-block">
         <div class="code-header">
           <span>${lang}</span>
           <button class="copy-btn" data-code-id="${codeId}">Copy</button>
         </div>
-        <div class="code-content" id="${codeId}">${escapeHtml(code.trim())}</div>
+        <div class="code-content" id="${codeId}">${escapedCode}</div>
       </div>
     `;
-  }).replace(/`([^`]+)`/g, '<code style="background: #161b22; padding: 2px 4px; border-radius: 3px; font-family: \'Roboto Mono\', monospace;">$1</code>');
+  });
+  
+  return html;
 }
 
 function escapeHtml(text) {
