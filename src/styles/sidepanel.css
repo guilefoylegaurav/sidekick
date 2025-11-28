@@ -248,14 +248,31 @@ body {
   border-radius: 8px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 600;
   transition: all 0.15s ease;
   margin: 0 5px 0 0;
 }
 
 #send-button:hover {
   background: #f0f0f0;
+}
+
+#send-button.disabled,
+#send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #cfcfcf;
+  color: #666666;
+}
+
+#clear-button.disabled,
+#clear-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #2a2a2a;
+  border-color: #2a2a2a;
+  color: #888888;
 }
 
 #clear-button {

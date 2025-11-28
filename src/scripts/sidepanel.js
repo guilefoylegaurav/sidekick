@@ -1,6 +1,7 @@
 const messagesDiv = document.getElementById('messages');
 const userInput = document.getElementById('user-input');
 const sendButton = document.getElementById('send-button');
+const clearButton = document.getElementById('clear-button');
 
 let pageContent = "";
 let currentTabId = null;
@@ -118,21 +119,18 @@ window.addEventListener('load', () => {
 });
 
 sendButton.addEventListener('click', sendMessage);
+clearButton.addEventListener('click', clearConversation);
 userInput.addEventListener('keypress', (event) => {
   if (event.key === 'Enter') {
     sendMessage();
   }
 });
 
-// Add clear button functionality
-document.addEventListener('DOMContentLoaded', () => {
-  const clearButton = document.getElementById('clear-button');
-  if (clearButton) {
-    clearButton.addEventListener('click', clearConversation);
-  }
-});
-
 function sendMessage() {
+  if (sendButton.disabled) {
+    return;
+  }
+  
   const message = userInput.value.trim();
   if (message) {
     clearEmptyState();
@@ -158,6 +156,11 @@ function hideQuickActions() {
 }
 
 function clearConversation() {
+
+  if (clearButton.disabled) {
+    return;
+  }
+
   // Confirm with user before clearing
   if (confirm('Are you sure you want to clear this conversation?')) {
     // Clear messages from UI
@@ -219,11 +222,10 @@ async function getLLMResponse(userMessage) {
     const prompt = promptParts.join('\n');
     
     // Make POST request to the API endpoint
-    const response = await fetch('http://localhost:3000/api/get_llm_response', {
+    const response = await fetch('http:localhost:3000/api/get_llm_response', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
       },
       body: JSON.stringify({
         prompt: prompt
@@ -242,7 +244,7 @@ async function getLLMResponse(userMessage) {
   } catch (error) {
     hideLoading();
     console.error('Error getting LLM response:', error);
-    displayMessage(`Sorry, I encountered an error: ${error.message}. Please make sure the API server is running at localhost:3000.`, 'llm');
+    displayMessage(`Sorry, I encountered an error: ${error.message}. Please make sure the API server is running.`, 'llm');
   }
 }
 
@@ -324,7 +326,17 @@ function copyCode(event) {
   }
 }
 
+function disableButton(button, isDisabled) {
+  if (!button) {
+    return;
+  }
+  button.disabled = isDisabled;
+  button.classList.toggle('disabled', isDisabled);
+}
+
 function showLoading() {
+  disableButton(sendButton, true);
+  disableButton(clearButton, true);
   const loadingElement = document.createElement('div');
   loadingElement.classList.add('loading');
   loadingElement.innerHTML = '<div class="horizontal-loader"></div>';
@@ -338,4 +350,6 @@ function hideLoading() {
   if (loadingElement) {
     loadingElement.remove();
   }
+  disableButton(sendButton, false);
+  disableButton(clearButton, false);
 }
