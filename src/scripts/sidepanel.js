@@ -222,7 +222,7 @@ async function getLLMResponse(userMessage) {
     const prompt = promptParts.join('\n');
     
     // Make POST request to the API endpoint
-    const response = await fetch('http:localhost:3000/api/get_llm_response', {
+    const response = await fetch('sidekick-backend-gold.vercel.app/api/get_llm_response', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
