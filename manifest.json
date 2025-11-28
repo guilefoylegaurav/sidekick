@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "Browsing experience sidekick",
   "permissions": ["sidePanel", "storage", "tabs", "activeTab", "scripting"],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "sidekick-backend-gold.vercel.app/*"
+  ],
   "content_scripts": [
     {
       "matches": [
