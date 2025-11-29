@@ -270,7 +270,7 @@ body {
 
 .input-wrapper {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
 }
 
@@ -284,6 +284,20 @@ body {
   font-family: inherit;
   font-weight: 400;
   outline: none;
+  resize: none;
+  min-height: 24px;
+  max-height: 120px;
+  overflow-y: hidden;
+  line-height: 1.5;
+}
+
+#user-input::-webkit-scrollbar {
+  display: none;
+}
+
+#user-input {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 #user-input::placeholder {
@@ -301,7 +315,7 @@ body {
   font-size: 15px;
   font-weight: 600;
   transition: all 0.15s ease;
-  margin: 0 5px 0 0;
+  margin: 0 4px 7px 0;
 }
 
 #send-button:hover {
@@ -338,6 +352,7 @@ body {
   align-items: center;
   justify-content: center;
   margin-right: 5px;
+  margin-bottom: 7px;
 }
 
 #clear-button:hover {

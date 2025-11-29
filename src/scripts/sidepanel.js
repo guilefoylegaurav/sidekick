@@ -124,10 +124,21 @@ window.addEventListener('load', () => {
 sendButton.addEventListener('click', sendMessage);
 clearButton.addEventListener('click', clearConversation);
 userInput.addEventListener('keypress', (event) => {
-  if (event.key === 'Enter') {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
     sendMessage();
   }
 });
+
+// Auto-resize textarea as user types
+function resizeTextarea() {
+  // Reset height to auto to get the correct scrollHeight
+  userInput.style.height = 'auto';
+  // Set height to scrollHeight (content height)
+  userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+}
+
+userInput.addEventListener('input', resizeTextarea);
 
 function sendMessage() {
   if (sendButton.disabled) {
@@ -140,6 +151,8 @@ function sendMessage() {
     hideQuickActions();
     displayMessage(message, 'user');
     userInput.value = '';
+    // Reset textarea height after clearing
+    resizeTextarea();
     getLLMResponse(message);
   }
 }
