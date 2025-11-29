@@ -1,3 +1,7 @@
+import { EMPTY_CTAs } from './modules/constants.js';
+import { getLLMResponse as fetchLLMResponse } from './modules/api.js';
+import { formatMessageWithCode, copyCode } from './modules/markdown.js';
+
 const messagesDiv = document.getElementById('messages');
 const userInput = document.getElementById('user-input');
 const sendButton = document.getElementById('send-button');
@@ -5,19 +9,6 @@ const clearButton = document.getElementById('clear-button');
 
 let pageContent = "";
 let currentTabId = null;
-
-const emptyCTAs = [
-  "What's the story here?",
-  "Surprise me with insights",
-  "Break this down for me",
-  "Give me the TL;DR", 
-  "Spill the tea!",
-  "What's the plot twist?",
-  "Make this make sense",
-  "What am I missing?",
-  "Connect the dots",
-  "Be my reading buddy"
-];
 
 // Get current tab ID and load tab-specific data
 function getCurrentTabAndLoadData() {
@@ -78,7 +69,7 @@ function loadTabData() {
 }
 
 function showEmptyState() {
-  const randomCTA = emptyCTAs[Math.floor(Math.random() * emptyCTAs.length)];
+  const randomCTA = EMPTY_CTAs[Math.floor(Math.random() * EMPTY_CTAs.length)];
   const emptyElement = document.createElement('div');
   emptyElement.classList.add('empty-state');
   emptyElement.innerHTML = `
@@ -199,45 +190,8 @@ async function getLLMResponse(userMessage) {
     // Get all prior messages from storage using the helper function
     const messages = await getSavedMessages();
     
-    // Build the prompt with page context and conversation history using an array
-    const promptParts = [];
-    
-    // Add page context if available
-    if (pageContent) {
-      promptParts.push(`Page Context:\n${pageContent}\n`);
-    }
-    
-    // Add conversation history
-    if (messages.length > 0) {
-      promptParts.push('Conversation History:');
-      messages.forEach(msg => {
-        const role = msg.sender === 'user' ? 'User' : 'Assistant';
-        promptParts.push(`${role}: ${msg.content}`);
-      });
-    }
-    
-    // Add the current user message
-    promptParts.push(`User: ${userMessage}`);
-    
-    const prompt = promptParts.join('\n');
-    
-    // Make POST request to the API endpoint
-    const response = await fetch('https://sidekick-backend-gold.vercel.app/api/get_llm_response', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt: prompt
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    const llmResponse = data.response || data.message || JSON.stringify(data);
+    // Fetch LLM response using the API module
+    const llmResponse = await fetchLLMResponse(userMessage, pageContent, messages);
     
     hideLoading();
     displayMessage(llmResponse, 'llm');
@@ -274,96 +228,6 @@ function saveMessage(content, sender) {
   });
 }
 
-function formatMessageWithCode(message) {
-  // Check if marked is available
-  if (typeof marked === 'undefined') {
-    console.warn('marked.js not loaded, using basic formatting');
-    return basicMarkdownFormat(message);
-  }
-  
-  // Parse markdown using marked.js
-  let html = marked.parse(message);
-  
-  // Post-process code blocks to add our custom wrapper with copy button
-  html = html.replace(/<pre><code(?:\s+class="language-(\w+)")?>([\s\S]*?)<\/code><\/pre>/g, (match, language, code) => {
-    const lang = language || 'text';
-    const codeId = 'code-' + Math.random().toString(36).substr(2, 9);
-    const escapedCode = escapeHtml(code.trim());
-    return `
-      <div class="code-block">
-        <div class="code-header">
-          <span>${lang}</span>
-          <button class="copy-btn" data-code-id="${codeId}">Copy</button>
-        </div>
-        <div class="code-content" id="${codeId}">${escapedCode}</div>
-      </div>
-    `;
-  });
-  
-  return html;
-}
-
-function basicMarkdownFormat(message) {
-  // Basic markdown formatting fallback
-  let html = escapeHtml(message);
-  
-  // Convert double line breaks to paragraphs
-  html = html.split('\n\n').map(paragraph => {
-    if (paragraph.trim()) {
-      return `<p>${paragraph.trim().replace(/\n/g, '<br>')}</p>`;
-    }
-    return '';
-  }).join('');
-  
-  // Handle code blocks
-  html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, language, code) => {
-    const lang = language || 'text';
-    const codeId = 'code-' + Math.random().toString(36).substr(2, 9);
-    return `
-      <div class="code-block">
-        <div class="code-header">
-          <span>${lang}</span>
-          <button class="copy-btn" data-code-id="${codeId}">Copy</button>
-        </div>
-        <div class="code-content" id="${codeId}">${code.trim()}</div>
-      </div>
-    `;
-  });
-  
-  // Handle inline code
-  html = html.replace(/`([^`]+)`/g, '<code style="background: #161b22; padding: 2px 4px; border-radius: 3px; font-family: \'JetBrains Mono\', monospace;">$1</code>');
-  
-  // Handle bold text
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  
-  // Handle italic text
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  
-  return html;
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-function copyCode(event) {
-  const btn = event.target;
-  const codeId = btn.getAttribute('data-code-id');
-  const codeElement = document.getElementById(codeId);
-  
-  if (codeElement) {
-    navigator.clipboard.writeText(codeElement.textContent).then(() => {
-      btn.textContent = 'Copied!';
-      btn.classList.add('copied');
-      setTimeout(() => {
-        btn.textContent = 'Copy';
-        btn.classList.remove('copied');
-      }, 2000);
-    });
-  }
-}
 
 function disableButton(button, isDisabled) {
   if (!button) {
