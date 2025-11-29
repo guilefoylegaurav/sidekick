@@ -1,6 +1,6 @@
 // API communication module for LLM requests
 
-import { API_ENDPOINT } from './constants.js';
+import { API_ENDPOINT, SYSTEM_PROMPT } from './constants.js';
 
 /**
  * Builds a prompt from page content, conversation history, and user message
@@ -10,11 +10,11 @@ import { API_ENDPOINT } from './constants.js';
  * @returns {string} The formatted prompt
  */
 function buildPrompt(pageContent, messages, userMessage) {
-  const promptParts = [];
+  const promptParts = [SYSTEM_PROMPT];
   
   // Add page context if available
   if (pageContent) {
-    promptParts.push(`Page Context:\n${pageContent}\n`);
+    promptParts.push(`\n\nPage Context:\n${pageContent}\n`);
   }
   
   // Add conversation history
