@@ -5,10 +5,11 @@
 }
 
 body {
-  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   background: #000000;
   color: #ffffff;
   height: 100vh;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 #app {
@@ -43,9 +44,9 @@ body {
 
 #header h1 {
   font-size: 20px;
-  font-weight: 400;
+  font-weight: 500;
   color: #ffffff;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
 }
 
 .status-indicator {
@@ -150,10 +151,59 @@ body {
 .message.llm {
   background: #1a1a1a;
   color: #ffffff;
-  padding: 20px 20px 20px 50px;
+  padding: 20px;
   border-radius: 12px;
   border: 1px solid #333333;
   margin-bottom: 20px;
+  line-height: 1.6;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.message.llm p {
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.message.llm p:last-child {
+  margin-bottom: 0;
+}
+
+.message.llm ul, .message.llm ol {
+  margin: 12px 0;
+  padding-left: 20px;
+}
+
+.message.llm li {
+  margin: 8px 0;
+  line-height: 1.5;
+}
+
+.message.llm h1, .message.llm h2, .message.llm h3, .message.llm h4, .message.llm h5, .message.llm h6 {
+  margin: 20px 0 12px 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.message.llm h1:first-child, .message.llm h2:first-child, .message.llm h3:first-child {
+  margin-top: 0;
+}
+
+.message.llm blockquote {
+  border-left: 3px solid #666666;
+  padding-left: 16px;
+  margin: 16px 0;
+  color: #cccccc;
+  font-style: italic;
+}
+
+.message.llm strong {
+  font-weight: 600;
+}
+
+.message.llm em {
+  font-style: italic;
 }
 
 .message.llm::before {
@@ -323,12 +373,13 @@ body {
 
 .code-content {
   padding: 16px;
-  font-family: 'Roboto Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-family: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', Consolas, 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.45;
   color: #e6edf3;
   overflow-x: auto;
   white-space: pre;
+  font-feature-settings: 'liga' 1, 'calt' 1;
 }
 
 .copy-btn {

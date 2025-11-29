@@ -222,7 +222,7 @@ async function getLLMResponse(userMessage) {
     const prompt = promptParts.join('\n');
     
     // Make POST request to the API endpoint
-    const response = await fetch('sidekick-backend-gold.vercel.app/api/get_llm_response', {
+    const response = await fetch('https://sidekick-backend-gold.vercel.app/api/get_llm_response', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -278,7 +278,7 @@ function formatMessageWithCode(message) {
   // Check if marked is available
   if (typeof marked === 'undefined') {
     console.warn('marked.js not loaded, using basic formatting');
-    return escapeHtml(message).replace(/\n/g, '<br>');
+    return basicMarkdownFormat(message);
   }
   
   // Parse markdown using marked.js
@@ -299,6 +299,45 @@ function formatMessageWithCode(message) {
       </div>
     `;
   });
+  
+  return html;
+}
+
+function basicMarkdownFormat(message) {
+  // Basic markdown formatting fallback
+  let html = escapeHtml(message);
+  
+  // Convert double line breaks to paragraphs
+  html = html.split('\n\n').map(paragraph => {
+    if (paragraph.trim()) {
+      return `<p>${paragraph.trim().replace(/\n/g, '<br>')}</p>`;
+    }
+    return '';
+  }).join('');
+  
+  // Handle code blocks
+  html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, language, code) => {
+    const lang = language || 'text';
+    const codeId = 'code-' + Math.random().toString(36).substr(2, 9);
+    return `
+      <div class="code-block">
+        <div class="code-header">
+          <span>${lang}</span>
+          <button class="copy-btn" data-code-id="${codeId}">Copy</button>
+        </div>
+        <div class="code-content" id="${codeId}">${code.trim()}</div>
+      </div>
+    `;
+  });
+  
+  // Handle inline code
+  html = html.replace(/`([^`]+)`/g, '<code style="background: #161b22; padding: 2px 4px; border-radius: 3px; font-family: \'JetBrains Mono\', monospace;">$1</code>');
+  
+  // Handle bold text
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  
+  // Handle italic text
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
   
   return html;
 }
