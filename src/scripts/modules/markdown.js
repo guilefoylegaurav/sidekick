@@ -5,10 +5,41 @@
  * @param {string} text - Text to escape
  * @returns {string} Escaped HTML string
  */
-export function escapeHtml(text) {
+function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+/**
+ * Handles copy button click for code blocks
+ * @param {Event} event - Click event
+ */
+function copyCode(event) {
+  const btn = event.target;
+  const codeId = btn.getAttribute('data-code-id');
+  const codeElement = document.getElementById(codeId);
+  
+  if (codeElement) {
+    navigator.clipboard.writeText(codeElement.textContent).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+}
+
+/**
+ * Attaches copy button event listeners to all copy buttons in the given element
+ * @param {HTMLElement} element - Element containing copy buttons
+ */
+function attachCopyListeners(element) {
+  element.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', copyCode);
+  });
 }
 
 /**
@@ -37,7 +68,7 @@ function formatCodeBlock(language, code) {
  * @param {string} message - Message to format
  * @returns {string} Formatted HTML string
  */
-export function basicMarkdownFormat(message) {
+function basicMarkdownFormat(message) {
   // Basic markdown formatting fallback
   let html = escapeHtml(message);
   
@@ -68,45 +99,34 @@ export function basicMarkdownFormat(message) {
 
 /**
  * Formats message with markdown support using marked.js or fallback
+ * If a container element is provided, sets its innerHTML and attaches copy button listeners
  * @param {string} message - Message to format
+ * @param {HTMLElement|null} containerElement - Optional element to set HTML and attach listeners to
  * @returns {string} Formatted HTML string
  */
-export function formatMessageWithCode(message) {
+export function formatMessageWithCode(message, containerElement = null) {
+  let html;
+  
   // Check if marked is available
   if (typeof marked === 'undefined') {
     console.warn('marked.js not loaded, using basic formatting');
-    return basicMarkdownFormat(message);
-  }
-  
-  // Parse markdown using marked.js
-  let html = marked.parse(message);
-  
-  // Post-process code blocks to add our custom wrapper with copy button
-  html = html.replace(/<pre><code(?:\s+class="language-(\w+)")?>([\s\S]*?)<\/code><\/pre>/g, (match, language, code) => {
-    return formatCodeBlock(language, code);
-  });
-  
-  return html;
-}
-
-/**
- * Handles copy button click for code blocks
- * @param {Event} event - Click event
- */
-export function copyCode(event) {
-  const btn = event.target;
-  const codeId = btn.getAttribute('data-code-id');
-  const codeElement = document.getElementById(codeId);
-  
-  if (codeElement) {
-    navigator.clipboard.writeText(codeElement.textContent).then(() => {
-      btn.textContent = 'Copied!';
-      btn.classList.add('copied');
-      setTimeout(() => {
-        btn.textContent = 'Copy';
-        btn.classList.remove('copied');
-      }, 2000);
+    html = basicMarkdownFormat(message);
+  } else {
+    // Parse markdown using marked.js
+    html = marked.parse(message);
+    
+    // Post-process code blocks to add our custom wrapper with copy button
+    html = html.replace(/<pre><code(?:\s+class="language-(\w+)")?>([\s\S]*?)<\/code><\/pre>/g, (match, language, code) => {
+      return formatCodeBlock(language, code);
     });
   }
+  
+  // If container element is provided, set innerHTML and attach listeners
+  if (containerElement) {
+    containerElement.innerHTML = html;
+    attachCopyListeners(containerElement);
+  }
+  
+  return html;
 }
 

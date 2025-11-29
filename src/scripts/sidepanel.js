@@ -1,6 +1,6 @@
 import { EMPTY_CTAs } from './modules/constants.js';
 import { getLLMResponse as fetchLLMResponse } from './modules/api.js';
-import { formatMessageWithCode, copyCode } from './modules/markdown.js';
+import { formatMessageWithCode } from './modules/markdown.js';
 
 const messagesDiv = document.getElementById('messages');
 const userInput = document.getElementById('user-input');
@@ -206,11 +206,9 @@ function displayMessage(message, sender, save = true) {
   const messageElement = document.createElement('div');
   messageElement.classList.add('message', sender);
   
-  // Format markdown for both user and LLM messages
-  messageElement.innerHTML = formatMessageWithCode(message);
-  messageElement.querySelectorAll('.copy-btn').forEach(btn => {
-    btn.addEventListener('click', copyCode);
-  });
+  // Format markdown and attach copy button listeners
+  // formatMessageWithCode will set innerHTML and attach listeners automatically
+  formatMessageWithCode(message, messageElement);
   
   messagesDiv.appendChild(messageElement);
   scrollToBottom();
