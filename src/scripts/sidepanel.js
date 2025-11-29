@@ -32,6 +32,18 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   loadTabData();
 });
 
+// Listen for tab refresh notifications from the service worker
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "tabRefreshed") {
+    // Only handle refresh for the current tab
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0] && tabs[0].id === request.tabId) {
+        handleTabRefresh();
+      }
+    });
+  }
+});
+
 // Add event listeners for quick action buttons
 document.addEventListener('DOMContentLoaded', () => {
   const quickActionButtons = document.querySelectorAll('.quick-action-btn');
@@ -146,14 +158,14 @@ function hideQuickActions() {
   }
 }
 
-function clearConversation() {
+function clearConversation(force = false) {
 
   if (clearButton.disabled) {
     return;
   }
 
-  // Confirm with user before clearing
-  if (confirm('Are you sure you want to clear this conversation?')) {
+  // Confirm with user before clearing unless forced
+  if (force || confirm('Are you sure you want to clear this conversation?')) {
     // Clear messages from UI
     messagesDiv.innerHTML = '';
     
@@ -167,6 +179,21 @@ function clearConversation() {
     // Show empty state and quick actions
     showEmptyState();
   }
+}
+
+function handleTabRefresh() {
+  // Clear conversation without confirmation
+  clearConversation(true);
+  
+  // Repopulate page content
+  chrome.runtime.sendMessage({ action: "requestPageContent" }, (response) => {
+    if (response && response.content) {
+      pageContent = response.content;
+      console.log("Page content reloaded after refresh:", pageContent.substring(0, 100) + "...");
+    } else {
+      console.log("Could not retrieve page content after refresh.");
+    }
+  });
 }
 
 function scrollToBottom() {
