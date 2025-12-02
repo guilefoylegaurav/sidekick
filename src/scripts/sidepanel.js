@@ -1,6 +1,7 @@
 import { EMPTY_CTAs } from './modules/constants.js';
 import { getLLMResponse as fetchLLMResponse } from './modules/api.js';
 import { formatMessageWithCode } from './modules/markdown.js';
+import { ChromeChatStorage } from './modules/storage.js';
 
 const messagesDiv = document.getElementById('messages');
 const userInput = document.getElementById('user-input');
@@ -9,6 +10,7 @@ const clearButton = document.getElementById('clear-button');
 
 let pageContent = "";
 let currentTabId = null;
+const chatStorage = new ChromeChatStorage();
 
 // Get current tab ID and load tab-specific data
 function getCurrentTabAndLoadData() {
@@ -61,11 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Helper function to get saved messages from storage
 function getSavedMessages() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get([`messages_${currentTabId}`], (result) => {
-      resolve(result[`messages_${currentTabId}`] || []);
-    });
-  });
+  return chatStorage.getMessages(currentTabId);
 }
 
 function loadTabData() {
@@ -259,11 +257,10 @@ function displayMessage(message, sender, save = true) {
 }
 
 function saveMessage(content, sender) {
-  chrome.storage.local.get([`messages_${currentTabId}`], (result) => {
-    const messages = result[`messages_${currentTabId}`] || [];
-    messages.push({ content, sender });
-    chrome.storage.local.set({ [`messages_${currentTabId}`]: messages });
-  });
+  if (!currentTabId && currentTabId !== 0) {
+    return;
+  }
+  chatStorage.appendMessage(currentTabId, { content, sender });
 }
 
 
