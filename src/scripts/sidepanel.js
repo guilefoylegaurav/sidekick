@@ -1,16 +1,40 @@
 import { EMPTY_CTAs } from './modules/constants.js';
 import { getLLMResponse as fetchLLMResponse } from './modules/api.js';
-import { formatMessageWithCode } from './modules/markdown.js';
 import { ChromeChatStorage } from './modules/storage.js';
+import { ChatView, InputController, QuickActionsController } from './modules/ui.js';
 
 const messagesDiv = document.getElementById('messages');
 const userInput = document.getElementById('user-input');
 const sendButton = document.getElementById('send-button');
 const clearButton = document.getElementById('clear-button');
+const quickActionsContainer = document.getElementById('quick-actions');
 
 let pageContent = "";
 let currentTabId = null;
 const chatStorage = new ChromeChatStorage();
+
+// UI layer instances
+const chatView = new ChatView({
+  messagesContainer: messagesDiv,
+  quickActionsContainer,
+  userInput,
+  sendButton,
+  clearButton,
+});
+
+const inputController = new InputController({
+  userInput,
+  sendButton,
+  clearButton,
+  onSend: () => sendMessage(),
+  onClear: (force) => clearConversation(force),
+});
+
+const quickActionsController = new QuickActionsController({
+  container: quickActionsContainer,
+  userInput,
+  onSend: () => sendMessage(),
+});
 
 // Get current tab ID and load tab-specific data
 function getCurrentTabAndLoadData() {
@@ -30,7 +54,7 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   // Update current tab ID when a new tab is activated
   currentTabId = activeInfo.tabId;
   // Clear current messages and load data for the new tab
-  messagesDiv.innerHTML = '';
+  chatView.clearMessages();
   loadTabData();
 });
 
@@ -44,21 +68,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     });
   }
-});
-
-// Add event listeners for quick action buttons
-document.addEventListener('DOMContentLoaded', () => {
-  const quickActionButtons = document.querySelectorAll('.quick-action-btn');
-  quickActionButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      const prompt = button.getAttribute('data-prompt');
-      if (prompt) {
-        // Set the prompt in the input field and trigger send
-        userInput.value = prompt;
-        sendMessage();
-      }
-    });
-  });
 });
 
 // Helper function to get saved messages from storage
@@ -80,24 +89,7 @@ function loadTabData() {
 
 function showEmptyState() {
   const randomCTA = EMPTY_CTAs[Math.floor(Math.random() * EMPTY_CTAs.length)];
-  const emptyElement = document.createElement('div');
-  emptyElement.classList.add('empty-state');
-  emptyElement.innerHTML = `
-    <div class="empty-content">
-      <div class="empty-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-      </div>
-      <p class="empty-message">${randomCTA}</p>
-      <p class="empty-subtitle">Ask me anything about this page</p>
-    </div>
-  `;
-  messagesDiv.appendChild(emptyElement);
-  const quickActions = document.getElementById('quick-actions');
-  if (quickActions) {
-    quickActions.classList.remove('hidden');
-  }
+  chatView.showEmptyState(randomCTA);
 }
 
 // Request page content when the side panel loads
@@ -119,25 +111,6 @@ window.addEventListener('load', () => {
   });
 });
 
-sendButton.addEventListener('click', sendMessage);
-clearButton.addEventListener('click', clearConversation);
-userInput.addEventListener('keypress', (event) => {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault();
-    sendMessage();
-  }
-});
-
-// Auto-resize textarea as user types
-function resizeTextarea() {
-  // Reset height to auto to get the correct scrollHeight
-  userInput.style.height = 'auto';
-  // Set height to scrollHeight (content height)
-  userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
-}
-
-userInput.addEventListener('input', resizeTextarea);
-
 function sendMessage() {
   if (sendButton.disabled) {
     return;
@@ -145,28 +118,22 @@ function sendMessage() {
   
   const message = userInput.value.trim();
   if (message) {
-    clearEmptyState();
+    clearEmptyState();  
     hideQuickActions();
     displayMessage(message, 'user');
     userInput.value = '';
     // Reset textarea height after clearing
-    resizeTextarea();
+    inputController.resetTextareaHeight();
     getLLMResponse(message);
   }
 }
 
 function clearEmptyState() {
-  const emptyState = document.querySelector('.empty-state');
-  if (emptyState) {
-    emptyState.remove();
-  }
+  chatView.clearEmptyState();
 }
 
 function hideQuickActions() {
-  const quickActions = document.getElementById('quick-actions');
-  if (quickActions) {
-    quickActions.classList.add('hidden');
-  }
+  chatView.hideQuickActions();
 }
 
 function clearConversation(force = false) {
@@ -178,11 +145,11 @@ function clearConversation(force = false) {
   // Confirm with user before clearing unless forced
   if (force || confirm('Are you sure you want to clear this conversation?')) {
     // Clear messages from UI
-    messagesDiv.innerHTML = '';
+    chatView.clearMessages();
     
     // Clear messages from storage
     if (currentTabId) {
-      chrome.storage.local.remove(`messages_${currentTabId}`, () => {
+      chatStorage.clearMessages(currentTabId).then(() => {
         console.log('Conversation cleared for tab:', currentTabId);
       });
     }
@@ -208,16 +175,7 @@ function handleTabRefresh() {
 }
 
 function scrollToBottom() {
-  const scroll = () => {
-
-    const lastElement = messagesDiv.lastElementChild;
-    if (lastElement) {
-      lastElement.scrollIntoView({ block: 'end' });
-    }
-
-  };
-
-  scroll();
+  chatView.scrollToBottom();
 }
 
 async function getLLMResponse(userMessage) {
@@ -241,15 +199,7 @@ async function getLLMResponse(userMessage) {
 }
 
 function displayMessage(message, sender, save = true) {
-  const messageElement = document.createElement('div');
-  messageElement.classList.add('message', sender);
-  
-  // Format markdown and attach copy button listeners
-  // formatMessageWithCode will set innerHTML and attach listeners automatically
-  formatMessageWithCode(message, messageElement);
-  
-  messagesDiv.appendChild(messageElement);
-  scrollToBottom();
+  chatView.displayMessage(message, sender);
   
   if (save && currentTabId) {
     saveMessage(message, sender);
@@ -264,30 +214,10 @@ function saveMessage(content, sender) {
 }
 
 
-function disableButton(button, isDisabled) {
-  if (!button) {
-    return;
-  }
-  button.disabled = isDisabled;
-  button.classList.toggle('disabled', isDisabled);
-}
-
 function showLoading() {
-  disableButton(sendButton, true);
-  disableButton(clearButton, true);
-  const loadingElement = document.createElement('div');
-  loadingElement.classList.add('loading');
-  loadingElement.innerHTML = '<div class="horizontal-loader"></div>';
-  loadingElement.id = 'loading-indicator';
-  messagesDiv.appendChild(loadingElement);
-  scrollToBottom();
+  chatView.showLoading();
 }
 
 function hideLoading() {
-  const loadingElement = document.getElementById('loading-indicator');
-  if (loadingElement) {
-    loadingElement.remove();
-  }
-  disableButton(sendButton, false);
-  disableButton(clearButton, false);
+  chatView.hideLoading();
 }
