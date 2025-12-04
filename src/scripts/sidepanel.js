@@ -1,5 +1,6 @@
 import { EMPTY_CTAs } from './modules/constants.js';
-import { getLLMResponse as fetchLLMResponse } from './modules/api.js';
+import { LLMClient } from './modules/api.js';
+import { MarkdownRenderer } from './modules/markdown.js';
 import { ChromeChatStorage } from './modules/storage.js';
 import { ChatView, InputController, QuickActionsController } from './modules/ui.js';
 
@@ -12,6 +13,8 @@ const quickActionsContainer = document.getElementById('quick-actions');
 let pageContent = "";
 let currentTabId = null;
 const chatStorage = new ChromeChatStorage();
+const llmClient = new LLMClient();
+const markdownRenderer = new MarkdownRenderer();
 
 // UI layer instances
 const chatView = new ChatView({
@@ -20,6 +23,7 @@ const chatView = new ChatView({
   userInput,
   sendButton,
   clearButton,
+  markdownRenderer,
 });
 
 const inputController = new InputController({
@@ -186,8 +190,8 @@ async function getLLMResponse(userMessage) {
     // Get all prior messages from storage using the helper function
     const messages = await getSavedMessages();
     
-    // Fetch LLM response using the API module
-    const llmResponse = await fetchLLMResponse(userMessage, pageContent, messages);
+    // Fetch LLM response using the LLM client
+    const llmResponse = await llmClient.getResponse(userMessage, pageContent, messages);
     
     hideLoading();
     displayMessage(llmResponse, 'llm');

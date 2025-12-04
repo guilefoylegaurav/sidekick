@@ -1,21 +1,19 @@
 // UI-layer classes for the sidepanel
-
-import { formatMessageWithCode } from './markdown.js';
-
 /**
  * Manages rendering of messages, empty state, quick actions visibility,
  * loading indicator, and scrolling.
  */
 export class ChatView {
   /**
-   * @param {{messagesContainer: HTMLElement, quickActionsContainer: HTMLElement|null, userInput: HTMLTextAreaElement, sendButton: HTMLButtonElement, clearButton: HTMLButtonElement}} deps
+   * @param {{messagesContainer: HTMLElement, quickActionsContainer: HTMLElement|null, userInput: HTMLTextAreaElement, sendButton: HTMLButtonElement, clearButton: HTMLButtonElement, markdownRenderer: { formatMessageWithCode: (message: string, containerElement: HTMLElement | null) => string }}} deps
    */
-  constructor({ messagesContainer, quickActionsContainer, userInput, sendButton, clearButton }) {
+  constructor({ messagesContainer, quickActionsContainer, userInput, sendButton, clearButton, markdownRenderer }) {
     this.messagesContainer = messagesContainer;
     this.quickActionsContainer = quickActionsContainer;
     this.userInput = userInput;
     this.sendButton = sendButton;
     this.clearButton = clearButton;
+    this.markdownRenderer = markdownRenderer;
   }
 
   /**
@@ -112,7 +110,9 @@ export class ChatView {
     messageElement.classList.add('message', sender);
 
     // Format markdown and attach copy button listeners
-    formatMessageWithCode(message, messageElement);
+    if (this.markdownRenderer && typeof this.markdownRenderer.formatMessageWithCode === 'function') {
+      this.markdownRenderer.formatMessageWithCode(message, messageElement);
+    }
 
     this.messagesContainer.appendChild(messageElement);
     this.scrollToBottom();
