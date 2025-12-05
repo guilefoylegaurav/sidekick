@@ -9,13 +9,29 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "requestPageContent") {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: "getPageContent" }, (response) => {
-          sendResponse(response);
-        });
+    const targetTabId = request.tabId;
+
+    const sendRequestToTab = (tabId) => {
+      if (!tabId && tabId !== 0) {
+        sendResponse({ content: '' });
+        return;
       }
-    });
+      chrome.tabs.sendMessage(tabId, { action: "getPageContent" }, (response) => {
+        sendResponse(response);
+      });
+    };
+
+    if (typeof targetTabId === 'number') {
+      sendRequestToTab(targetTabId);
+    } else {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          sendRequestToTab(tabs[0].id);
+        } else {
+          sendResponse({ content: '' });
+        }
+      });
+    }
     return true; // Required for asynchronous sendResponse
   }
 });

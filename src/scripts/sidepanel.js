@@ -3,6 +3,8 @@ import { LLMClient } from './modules/api.js';
 import { MarkdownRenderer } from './modules/markdown.js';
 import { ChromeChatStorage } from './modules/storage.js';
 import { ChatView, InputController, QuickActionsController } from './modules/ui.js';
+import { TabManager } from './modules/tabManager.js';
+import { PageContentManager } from './modules/pageContentManager.js';
 
 const messagesDiv = document.getElementById('messages');
 const userInput = document.getElementById('user-input');
@@ -15,6 +17,7 @@ let currentTabId = null;
 const chatStorage = new ChromeChatStorage();
 const llmClient = new LLMClient();
 const markdownRenderer = new MarkdownRenderer();
+const pageContentManager = new PageContentManager();
 
 // UI layer instances
 const chatView = new ChatView({
@@ -40,37 +43,16 @@ const quickActionsController = new QuickActionsController({
   onSend: () => sendMessage(),
 });
 
-// Get current tab ID and load tab-specific data
-function getCurrentTabAndLoadData() {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]) {
-      currentTabId = tabs[0].id;
-      loadTabData();
-    }
-  });
-}
-
-// Load data when side panel opens
-getCurrentTabAndLoadData();
-
-// Listen for tab activation to handle switching between tabs
-chrome.tabs.onActivated.addListener((activeInfo) => {
-  // Update current tab ID when a new tab is activated
-  currentTabId = activeInfo.tabId;
-  // Clear current messages and load data for the new tab
-  chatView.clearMessages();
-  loadTabData();
-});
-
-// Listen for tab refresh notifications from the service worker
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "tabRefreshed") {
-    // Only handle refresh for the current tab
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0] && tabs[0].id === request.tabId) {
-        handleTabRefresh();
-      }
-    });
+const tabManager = new TabManager({
+  onTabIdChange: (tabId) => {
+    currentTabId = tabId;
+  },
+  onActiveTabChange: () => {
+    chatView.clearMessages();
+    loadTabData();
+  },
+  onTabRefreshed: () => {
+    handleTabRefresh();
   }
 });
 
@@ -105,14 +87,17 @@ window.addEventListener('load', () => {
     console.error('marked.js failed to load');
   }
   
-  chrome.runtime.sendMessage({ action: "requestPageContent" }, (response) => {
-    if (response && response.content) {
-      pageContent = response.content;
-      console.log("Page content loaded:", pageContent.substring(0, 100) + "..."); // Log first 100 chars
+  pageContentManager.fetchPageContent(currentTabId).then((content) => {
+    if (content) {
+      pageContent = content;
+      console.log("Page content loaded:", pageContent.substring(0, 100) + "...");
     } else {
       console.log("Could not retrieve page content.");
     }
   });
+
+  // Initialize tab management after the page has loaded
+  tabManager.init();
 });
 
 function sendMessage() {
@@ -168,9 +153,9 @@ function handleTabRefresh() {
   clearConversation(true);
   
   // Repopulate page content
-  chrome.runtime.sendMessage({ action: "requestPageContent" }, (response) => {
-    if (response && response.content) {
-      pageContent = response.content;
+  pageContentManager.fetchPageContent(currentTabId).then((content) => {
+    if (content) {
+      pageContent = content;
       console.log("Page content reloaded after refresh:", pageContent.substring(0, 100) + "...");
     } else {
       console.log("Could not retrieve page content after refresh.");
