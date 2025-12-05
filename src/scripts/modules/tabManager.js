@@ -66,6 +66,24 @@ export class TabManager {
       });
     }
   }
+
+  /**
+   * Get all tabs in the browser with their ids and titles.
+   * @returns {Promise<Array<{id: number, title: string}>>}
+   */
+  async getAllTabs() {
+    return new Promise((resolve) => {
+      chrome.tabs.query({}, (tabs) => {
+        const simplified = tabs
+          .filter((tab) => typeof tab.id === 'number')
+          .map((tab) => ({
+            id: tab.id,
+            title: tab.title || '',
+          }));
+        resolve(simplified);
+      });
+    });
+  }
 }
 
 
