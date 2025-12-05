@@ -265,4 +265,87 @@ export class QuickActionsController {
   }
 }
 
+/**
+ * Handles the Tabs Selector button and dropdown for choosing tabs.
+ */
+export class TabsSelectionController {
+  /**
+   * @param {{ button: HTMLElement | null, tabManager: { getAllTabs: () => Promise<Array<{id: number, title: string}>> }, maxTabs?: number }} deps
+   */
+  constructor({ button, tabManager, maxTabs = 6 }) {
+    this.button = button;
+    this.tabManager = tabManager;
+    this.maxTabs = maxTabs;
+    this.menu = document.getElementById('header-menu');
+
+    this._handleButtonClick = this._handleButtonClick.bind(this);
+    this._handleDocumentClick = this._handleDocumentClick.bind(this);
+
+    this._bindEvents();
+  }
+
+  _bindEvents() {
+    if (!this.button || !this.menu) {
+      return;
+    }
+
+    this.button.addEventListener('click', this._handleButtonClick);
+    document.addEventListener('click', this._handleDocumentClick);
+  }
+
+  async _handleButtonClick(event) {
+    if (!this.menu) return;
+    event.stopPropagation();
+
+    const willOpen = this.menu.classList.contains('hidden');
+
+    if (willOpen) {
+      await this._populateMenu();
+      this.menu.classList.remove('hidden');
+    } else {
+      this.menu.classList.add('hidden');
+    }
+  }
+
+  _handleDocumentClick(event) {
+    if (!this.menu || !this.button) return;
+
+    if (!this.menu.contains(event.target) && event.target !== this.button) {
+      this.menu.classList.add('hidden');
+    }
+  }
+
+  async _populateMenu() {
+    if (!this.menu || !this.tabManager || typeof this.tabManager.getAllTabs !== 'function') {
+      return;
+    }
+
+    const tabs = await this.tabManager.getAllTabs();
+    const limitedTabs = tabs.slice(0, this.maxTabs);
+
+    // Clear existing content (e.g., placeholder items)
+    this.menu.innerHTML = '';
+
+    limitedTabs.forEach((tab) => {
+      const item = document.createElement('label');
+      item.className = 'header-menu-item tabs-menu-item';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'tabs-menu-checkbox';
+      checkbox.value = String(tab.id);
+      checkbox.dataset.tabId = String(tab.id);
+
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'tabs-menu-title';
+      titleSpan.textContent = tab.title || 'Untitled tab';
+
+      item.appendChild(checkbox);
+      item.appendChild(titleSpan);
+
+      this.menu.appendChild(item);
+    });
+  }
+}
+
 

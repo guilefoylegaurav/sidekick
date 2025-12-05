@@ -2,7 +2,7 @@ import { EMPTY_CTAs } from './modules/constants.js';
 import { LLMClient } from './modules/api.js';
 import { MarkdownRenderer } from './modules/markdown.js';
 import { ChromeChatStorage } from './modules/storage.js';
-import { ChatView, InputController, QuickActionsController } from './modules/ui.js';
+import { ChatView, InputController, QuickActionsController, TabsSelectionController } from './modules/ui.js';
 import { TabManager } from './modules/tabManager.js';
 import { PageContentManager } from './modules/pageContentManager.js';
 
@@ -11,6 +11,7 @@ const userInput = document.getElementById('user-input');
 const sendButton = document.getElementById('send-button');
 const clearButton = document.getElementById('clear-button');
 const quickActionsContainer = document.getElementById('quick-actions');
+const tabsSelectorButton = document.getElementById('tabs-selector-button');
 
 let pageContent = "";
 let currentTabId = null;
@@ -54,6 +55,12 @@ const tabManager = new TabManager({
   onTabRefreshed: () => {
     handleTabRefresh();
   }
+});
+
+// Tabs selector controller for header menu
+const tabsSelectionController = new TabsSelectionController({
+  button: tabsSelectorButton,
+  tabManager,
 });
 
 // Helper function to get saved messages from storage
@@ -161,10 +168,6 @@ function handleTabRefresh() {
       console.log("Could not retrieve page content after refresh.");
     }
   });
-}
-
-function scrollToBottom() {
-  chatView.scrollToBottom();
 }
 
 async function getLLMResponse(userMessage) {
