@@ -277,9 +277,11 @@ export class TabsSelectionController {
     this.tabManager = tabManager;
     this.maxTabs = maxTabs;
     this.menu = document.getElementById('header-menu');
+    this.selectedTabIds = new Set();
 
     this._handleButtonClick = this._handleButtonClick.bind(this);
     this._handleDocumentClick = this._handleDocumentClick.bind(this);
+    this._handleCheckboxChange = this._handleCheckboxChange.bind(this);
 
     this._bindEvents();
   }
@@ -335,6 +337,8 @@ export class TabsSelectionController {
       checkbox.className = 'tabs-menu-checkbox';
       checkbox.value = String(tab.id);
       checkbox.dataset.tabId = String(tab.id);
+      checkbox.checked = this.selectedTabIds.has(tab.id);
+      checkbox.addEventListener('change', this._handleCheckboxChange);
 
       const titleSpan = document.createElement('span');
       titleSpan.className = 'tabs-menu-title';
@@ -345,6 +349,42 @@ export class TabsSelectionController {
 
       this.menu.appendChild(item);
     });
+  }
+
+  _handleCheckboxChange(event) {
+    const checkbox = event.target;
+    const tabId = parseInt(checkbox.dataset.tabId, 10);
+
+    if (checkbox.checked) {
+      this.selectedTabIds.add(tabId);
+    } else {
+      this.selectedTabIds.delete(tabId);
+    }
+  }
+
+  /**
+   * Get the currently selected tab IDs.
+   * @returns {Array<number>}
+   */
+  getSelectedTabIds() {
+    return Array.from(this.selectedTabIds);
+  }
+
+  /**
+   * Set the selected tab IDs.
+   * @param {Array<number>} tabIds
+   */
+  setSelectedTabIds(tabIds) {
+    console.log("Setting selected tab IDs invoked");
+    this.selectedTabIds.clear();
+    if (Array.isArray(tabIds)) {
+      tabIds.forEach(id => {
+        if (typeof id === 'number') {
+          console.log("Setting selected tab IDs", id);
+          this.selectedTabIds.add(id);
+        }
+      });
+    }
   }
 }
 

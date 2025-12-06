@@ -5,7 +5,9 @@
   "permissions": ["sidePanel", "storage", "tabs", "activeTab", "scripting"],
   "host_permissions": [
     "http://localhost:3000/*",
-    "sidekick-backend-gold.vercel.app/*"
+    "https://sidekick-backend-gold.vercel.app/*",
+    "http://*/*",
+    "https://*/*"
   ],
   "content_scripts": [
     {

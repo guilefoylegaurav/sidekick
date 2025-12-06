@@ -17,7 +17,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
       }
       chrome.tabs.sendMessage(tabId, { action: "getPageContent" }, (response) => {
-        sendResponse(response);
+        if (chrome.runtime.lastError) {
+          console.warn("Error sending message to tab", tabId, ":", chrome.runtime.lastError.message);
+          sendResponse({ content: '' });
+        } else {
+          sendResponse(response || { content: '' });
+        }
       });
     };
 
