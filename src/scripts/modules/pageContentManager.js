@@ -103,7 +103,7 @@ export class PageContentManager {
    * @param {number[]} tabIds - Array of tab IDs to fetch content for.
    * @returns {Promise<string>} - Combined content from all tabs.
    */
-  async fetchCombinedTabsContent(tabIds) {
+  async fetchContent(tabIds) {
     const tabContents = await this.fetchMultipleTabsContent(tabIds);
     
     if (tabContents.length === 0) {
@@ -113,11 +113,9 @@ export class PageContentManager {
     // Combine content from all tabs with clear separators
     const combinedContent = tabContents
       .map((tab, index) => {
-        const tabNumber = index + 1;
-        const separator = `\n\n=== TAB ${tabNumber}: ${tab.title} ===\n\n`;
-        return separator + tab.content;
+        return tab.content;
       })
-      .join('\n\n--- END OF TAB ---\n\n');
+      .join('\n\n');
 
     console.log(`Combined content from ${tabContents.length} tabs:`, combinedContent.substring(0, 200) + "...");
     return combinedContent;
