@@ -113,11 +113,9 @@ export class PageContentManager {
     // Combine content from all tabs with clear separators
     const combinedContent = tabContents
       .map((tab, index) => {
-        const tabNumber = index + 1;
-        const separator = `\n\n=== TAB ${tabNumber}: ${tab.title} ===\n\n`;
-        return separator + tab.content;
+        return tab.content;
       })
-      .join('\n\n--- END OF TAB ---\n\n');
+      .join('\n\n');
 
     console.log(`Combined content from ${tabContents.length} tabs:`, combinedContent.substring(0, 200) + "...");
     return combinedContent;

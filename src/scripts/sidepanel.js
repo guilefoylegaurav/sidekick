@@ -13,7 +13,6 @@ const clearButton = document.getElementById('clear-button');
 const quickActionsContainer = document.getElementById('quick-actions');
 const tabsSelectorButton = document.getElementById('tabs-selector-button');
 
-let pageContent = "";
 let currentTabId = null;
 const chatStorage = new ChromeChatStorage();
 const llmClient = new LLMClient();
@@ -93,15 +92,6 @@ window.addEventListener('load', () => {
   } else {
     console.error('marked.js failed to load');
   }
-  
-  pageContentManager.fetchPageContent(currentTabId).then((content) => {
-    if (content) {
-      pageContent = content;
-      console.log("Page content loaded:", pageContent.substring(0, 100) + "...");
-    } else {
-      console.log("Could not retrieve page content.");
-    }
-  });
 
   // Initialize tab management after the page has loaded
   tabManager.init();
@@ -158,16 +148,6 @@ function clearConversation(force = false) {
 function handleTabRefresh() {
   // Clear conversation without confirmation
   clearConversation(true);
-  
-  // Repopulate page content
-  pageContentManager.fetchPageContent(currentTabId).then((content) => {
-    if (content) {
-      pageContent = content;
-      console.log("Page content reloaded after refresh:", pageContent.substring(0, 100) + "...");
-    } else {
-      console.log("Could not retrieve page content after refresh.");
-    }
-  });
 }
 
 async function getLLMResponse(userMessage) {
@@ -177,6 +157,8 @@ async function getLLMResponse(userMessage) {
   try {
     // Get all prior messages from storage using the helper function
     const messages = await getSavedMessages();
+
+    const pageContent = await pageContentManager.fetchContent(tabsSelectionController.getSelectedTabIds());
     
     // Fetch LLM response using the LLM client
     const llmResponse = await llmClient.getResponse(userMessage, pageContent, messages);
