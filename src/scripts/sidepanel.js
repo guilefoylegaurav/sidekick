@@ -62,6 +62,38 @@ const tabsSelectionController = new TabsSelectionController({
   tabManager,
 });
 
+// Connect TabManager to TabsSelectionController after both are created
+tabManager.onTabIdChange = (tabId) => {
+  currentTabId = tabId;
+  // Also update the tabs selection controller
+  tabsSelectionController.setSelectedTabIds([tabId]);
+};
+
+// Update onActiveTabChange to also update TabsSelectionController
+tabManager.onActiveTabChange = () => {
+  chatView.clearMessages();
+  loadTabData();
+
+  // Close any open dropdown on tab refresh
+  tabsSelectionController.closeDropdown();
+
+  // Update tabs selection controller for tab switches
+  if (currentTabId !== null) {
+    tabsSelectionController.setSelectedTabIds([currentTabId]);
+  }
+};
+
+// Update onTabRefreshed to close dropdown and update TabsSelectionController
+tabManager.onTabRefreshed = () => {
+  handleTabRefresh();
+  // Close any open dropdown on tab refresh
+  tabsSelectionController.closeDropdown();
+  // Update tabs selection controller
+  if (currentTabId !== null) {
+    tabsSelectionController.setSelectedTabIds([currentTabId]);
+  }
+};
+
 // Helper function to get saved messages from storage
 function getSavedMessages() {
   return chatStorage.getMessages(currentTabId);

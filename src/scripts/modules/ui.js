@@ -386,6 +386,15 @@ export class TabsSelectionController {
       });
     }
   }
+
+  /**
+   * Close the dropdown menu if it's open.
+   */
+  closeDropdown() {
+    if (this.menu && !this.menu.classList.contains('hidden')) {
+      this.menu.classList.add('hidden');
+    }
+  }
 }
 
 
