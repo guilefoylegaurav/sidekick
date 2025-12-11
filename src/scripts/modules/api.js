@@ -1,6 +1,28 @@
 // API communication module for LLM requests
 
-import { API_ENDPOINT, SYSTEM_PROMPT } from './constants.js';
+import { API_ENDPOINT, SYSTEM_PROMPT, JWT_TOKEN_KEY } from './constants.js';
+
+/**
+ * Read the JWT token for the current user from chrome.storage.local.
+ * @returns {Promise<string|null>}
+ */
+async function getAuthToken() {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage.local.get([JWT_TOKEN_KEY], (result) => {
+        const token = result[JWT_TOKEN_KEY];
+        if (typeof token === 'string' && token.length > 0) {
+          resolve(token);
+        } else {
+          resolve(null);
+        }
+      });
+    } catch (error) {
+      console.error('Error reading auth token from storage:', error);
+      resolve(null);
+    }
+  });
+}
 
 /**
  * LLMClient encapsulates prompt construction and API communication.
@@ -47,6 +69,7 @@ export class LLMClient {
 
   /**
    * Fetches LLM response from the API.
+   * Includes the locally stored JWT as a Bearer token when present.
    * @param {string} userMessage
    * @param {string} pageContent
    * @param {Array<{content: string, sender: string}>} messages
@@ -54,12 +77,19 @@ export class LLMClient {
    */
   async getResponse(userMessage, pageContent, messages) {
     const prompt = this.buildPrompt(pageContent, messages, userMessage);
+    const token = await getAuthToken();
+
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
     const response = await fetch(this.endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         prompt,
       }),
