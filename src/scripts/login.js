@@ -1,4 +1,6 @@
-// Simple client-side login handling using chrome.storage.local
+// Simple server-side login handling using the backend API
+
+import { API_LOGIN_ENDPOINT, JWT_TOKEN_KEY } from './modules/constants.js';
 
 const form = document.getElementById('login-form');
 const emailInput = document.getElementById('email');
@@ -39,8 +41,36 @@ function setSubmitting(isSubmitting) {
   submitButton.classList.toggle('disabled', isSubmitting);
 }
 
+async function performLogin(email, password) {
+  const response = await fetch(API_LOGIN_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (e) {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const message = (data && data.message) || 'Login failed. Please try again.';
+    throw new Error(message);
+  }
+
+  if (!data || !data.token) {
+    throw new Error('Login response did not include a token.');
+  }
+
+  return data;
+}
+
 if (form) {
-  form.addEventListener('submit', (event) => {
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
     if (!emailInput || !passwordInput) {
@@ -57,13 +87,37 @@ if (form) {
     }
 
     setSubmitting(true);
+    // Clear any previous error
+    if (errorEl) {
+      errorEl.textContent = '';
+      errorEl.classList.add('hidden');
+    }
 
     try {
-      // placeholder
+      const data = await performLogin(email, password);
+
+      const token = data.token;
+      const user = data.user || { email };
+
+      // Persist auth state in extension storage.
+      chrome.storage.local.set(
+        {
+          sidekickToken: token
+        },
+        () => {
+          setSubmitting(false);
+          showSuccess(data.message || `Welcome back, ${user.email}!`);
+
+          // Redirect to the main sidepanel after a short delay
+          setTimeout(() => {
+            window.location.href = './sidepanel.html';
+          }, 1200);
+        }
+      );
     } catch (error) {
-      console.error('Error reading user from storage:', error);
+      console.error('Error logging user in:', error);
       setSubmitting(false);
-      showError('Something went wrong while logging you in.');
+      showError(error.message || 'Something went wrong while logging you in.');
     }
   });
 }
