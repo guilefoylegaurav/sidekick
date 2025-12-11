@@ -17,6 +17,7 @@ export class ChatView {
     this.sendButton = sendButton;
     this.clearButton = clearButton;
     this.markdownRenderer = markdownRenderer;
+    this._originalPlaceholder = userInput ? userInput.placeholder : '';
   }
 
   /**
@@ -137,25 +138,24 @@ export class ChatView {
    * Shows a loading indicator and disables buttons.
    */
   showLoading() {
-    if (!this.messagesContainer) {
-      return;
-    }
     this.setButtonsDisabled(true);
-
     const existing = document.getElementById('loading-indicator');
     if (existing) {
       existing.remove();
     }
 
-    const loadingElement = document.createElement('div');
-    loadingElement.classList.add('loading');
-    loadingElement.innerHTML = `
-      <div class="loading-label">Thinking…</div>
-      <div class="horizontal-loader"></div>
-    `;
-    loadingElement.id = 'loading-indicator';
-    this.messagesContainer.appendChild(loadingElement);
-    this.scrollToBottom();
+    const inputContainer = document.getElementById('input-container');
+    if (inputContainer) {
+      inputContainer.classList.add('is-loading');
+    }
+
+    if (this.userInput) {
+      if (typeof this._originalPlaceholder !== 'string') {
+        this._originalPlaceholder = this.userInput.placeholder || '';
+      }
+      this.userInput.placeholder = 'Thinking…';
+      this.userInput.disabled = true;
+    }
   }
 
   /**
@@ -166,6 +166,17 @@ export class ChatView {
     if (loadingElement) {
       loadingElement.remove();
     }
+
+    const inputContainer = document.getElementById('input-container');
+    if (inputContainer) {
+      inputContainer.classList.remove('is-loading');
+    }
+
+    if (this.userInput) {
+      this.userInput.disabled = false;
+      this.userInput.placeholder = this._originalPlaceholder || 'Ask anything...';
+    }
+
     this.setButtonsDisabled(false);
   }
 }

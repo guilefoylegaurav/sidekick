@@ -97,10 +97,11 @@ body {
   min-width: 160px;
   max-width: 260px;
   padding: 6px 0;
-  background: #050505;
-  border: 1px solid #333333;
+  background: rgba(20, 20, 20, 0.96);
+  border: 1px solid #444444;
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(18px);
   z-index: 200;
 }
 
@@ -150,7 +151,7 @@ body {
 }
 
 .header-menu-item:hover {
-  background: #151515;
+  background: #202020;
 }
 
 .tabs-menu-item {
@@ -160,7 +161,7 @@ body {
 }
 
 .tabs-menu-checkbox {
-  accent-color: #ffffff;
+  accent-color: #3b82f6;
 }
 
 .tabs-menu-title {
@@ -323,37 +324,7 @@ body {
 }
 
 .loading {
-  margin: 16px 0 24px;
-  text-align: left;
-}
-
-.loading::before {
-  content: none;
-}
-
-.loading-label {
-  font-size: 12px;
-  color: #9ca3af;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.horizontal-loader {
-  width: 100%;
-  height: 3px;
   margin: 0;
-  border-radius: 999px;
-  background-image: linear-gradient(90deg, #f97316, #a855f7, #22c55e, #f97316);
-  background-size: 200% 100%;
-  animation: loading-gradient 1.2s ease-in-out infinite;
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
-}
-
-@keyframes loading-gradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
 }
 
 #input-container {
@@ -367,6 +338,27 @@ body {
   background: #000000;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   z-index: 100;
+}
+
+#input-container.is-loading {
+  border-color: transparent;
+  background-image:
+    linear-gradient(#000000, #000000),
+    linear-gradient(90deg, #f97316, #a855f7, #22c55e, #f97316);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-size: auto, 200% 200%;
+  background-position: center, 0% 50%;
+  animation: input-border-loading 2.2s ease-in-out infinite;
+}
+
+@keyframes input-border-loading {
+  0% {
+    background-position: center, 0% 50%;
+  }
+  100% {
+    background-position: center, 100% 50%;
+  }
 }
 
 .input-wrapper {
@@ -434,7 +426,7 @@ body {
 #send-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background: #cfcfcf;
+  background: none;
   color: #666666;
 }
 

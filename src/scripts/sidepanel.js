@@ -212,7 +212,7 @@ async function getLLMResponse(userMessage) {
   } catch (error) {
     hideLoading();
     console.error('Error getting LLM response:', error);
-    displayMessage(`Sorry, I encountered an error: ${error.message}. Please make sure the API server is running.`, 'llm');
+    displayMessage(`Whoops. Hit the rate limit. Try again after a few minutes maybe?`, 'llm');
   }
 }
 
