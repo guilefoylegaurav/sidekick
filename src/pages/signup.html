@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>not clippy – Sign up</title>
+  <link rel="stylesheet" href="../styles/sidepanel.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <div class="header-content">
+        <div class="header-logo">
+          <img src="../icons/icon.png" alt="not clippy" class="logo-icon">
+          <h1>not clippy</h1>
+        </div>
+      </div>
+    </header>
+
+    <main id="chat-container">
+      <div id="messages">
+        <div class="empty-state">
+          <div class="empty-content">
+            <h2 class="empty-message">Create your account</h2>
+            <p class="empty-subtitle">Sign up to start using not clippy</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="auth-container">
+        <form id="signup-form" class="auth-form">
+          <div class="auth-field">
+            <label for="name">Name</label>
+            <input id="name" name="name" type="text" autocomplete="name" required />
+          </div>
+          <div class="auth-field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="auth-field">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="new-password" required />
+          </div>
+          <div class="auth-field">
+            <label for="confirm-password">Confirm password</label>
+            <input id="confirm-password" name="confirm-password" type="password" autocomplete="new-password" required />
+          </div>
+
+          <p id="signup-error" class="auth-message auth-error hidden"></p>
+          <p id="signup-success" class="auth-message auth-success hidden"></p>
+
+          <button type="submit" id="signup-submit" class="auth-primary-button">Sign up</button>
+
+          <p class="auth-switch">
+            Already have an account?
+            <a href="./login.html">Log in</a>
+          </p>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="../scripts/signup.js"></script>
+</body>
+</html>
+
+

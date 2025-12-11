@@ -5,6 +5,7 @@ import { ChromeChatStorage } from './modules/storage.js';
 import { ChatView, InputController, QuickActionsController, TabsSelectionController } from './modules/ui.js';
 import { TabManager } from './modules/tabManager.js';
 import { PageContentManager } from './modules/pageContentManager.js';
+import { ensureAuthenticated } from './modules/auth.js';
 
 const messagesDiv = document.getElementById('messages');
 const userInput = document.getElementById('user-input');
@@ -118,6 +119,10 @@ function showEmptyState() {
 
 // Request page content when the side panel loads
 window.addEventListener('load', () => {
+  // Before doing anything else, ensure the user is authenticated.
+  // If not, this will redirect to the login page.
+  ensureAuthenticated();
+
   // Verify marked.js is loaded
   if (typeof marked !== 'undefined') {
     console.log('marked.js loaded successfully');

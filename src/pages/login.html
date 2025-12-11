@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>not clippy – Log in</title>
+  <link rel="stylesheet" href="../styles/sidepanel.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <header id="header">
+      <div class="header-content">
+        <div class="header-logo">
+          <img src="../icons/icon.png" alt="not clippy" class="logo-icon">
+          <h1>not clippy</h1>
+        </div>
+      </div>
+    </header>
+
+    <main id="chat-container">
+      <div id="messages">
+        <div class="empty-state">
+          <div class="empty-content">
+            <h2 class="empty-message">Welcome back</h2>
+            <p class="empty-subtitle">Log in to continue with not clippy</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="auth-container">
+        <form id="login-form" class="auth-form">
+          <div class="auth-field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="auth-field">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required />
+          </div>
+
+          <p id="login-error" class="auth-message auth-error hidden"></p>
+          <p id="login-success" class="auth-message auth-success hidden"></p>
+
+          <button type="submit" id="login-submit" class="auth-primary-button">Log in</button>
+
+          <p class="auth-switch">
+            New here?
+            <a href="./signup.html">Create an account</a>
+          </p>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="../scripts/login.js"></script>
+</body>
+</html>
+
+
