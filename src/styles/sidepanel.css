@@ -294,38 +294,37 @@ body {
 }
 
 .loading {
-  background: #1a1a1a;
-  padding: 20px;
-  border-radius: 18px;
-  border: 1px solid #333333;
-  margin-bottom: 20px;
+  margin: 16px 0 24px;
+  text-align: left;
 }
 
 .loading::before {
   content: none;
 }
 
+.loading-label {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
 .horizontal-loader {
   width: 100%;
-  height: 2px;
-  background: #333333;
-  border-radius: 1px;
-  overflow: hidden;
+  height: 3px;
+  margin: 0;
+  border-radius: 999px;
+  background-image: linear-gradient(90deg, #f97316, #a855f7, #22c55e, #f97316);
+  background-size: 200% 100%;
+  animation: loading-gradient 1.2s ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
 }
 
-.horizontal-loader::after {
-  content: '';
-  display: block;
-  width: 30%;
-  height: 100%;
-  background: #ffffff;
-  border-radius: 1px;
-  animation: loading 1.5s infinite ease-in-out;
-}
-
-@keyframes loading {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(400%); }
+@keyframes loading-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 #input-container {

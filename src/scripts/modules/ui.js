@@ -149,7 +149,10 @@ export class ChatView {
 
     const loadingElement = document.createElement('div');
     loadingElement.classList.add('loading');
-    loadingElement.innerHTML = '<div class="horizontal-loader"></div>';
+    loadingElement.innerHTML = `
+      <div class="loading-label">Thinking…</div>
+      <div class="horizontal-loader"></div>
+    `;
     loadingElement.id = 'loading-indicator';
     this.messagesContainer.appendChild(loadingElement);
     this.scrollToBottom();
