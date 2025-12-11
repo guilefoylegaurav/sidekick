@@ -91,8 +91,9 @@ body {
 
 .header-menu {
   position: absolute;
-  top: 120%;
-  right: 0;
+  top: auto;
+  bottom: 120%;
+  left: 0;
   min-width: 160px;
   max-width: 260px;
   padding: 6px 0;
@@ -107,6 +108,34 @@ body {
   display: none;
 }
 
+.context-actions {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 8px;
+}
+
+/* Make context (tabs selector) button match input bar buttons */
+.context-actions .icon-button {
+  background: none;
+  border: none;
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.context-actions .icon-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.context-actions .icon-button:hover {
+  background: #f97316;
+}
 .header-menu-item {
   width: 100%;
   padding: 8px 14px;
@@ -348,7 +377,7 @@ body {
 
 #user-input {
   flex: 1;
-  padding: 16px 20px;
+  padding: 16px 0px;
   border: none;
   background: transparent;
   color: #ffffff;
@@ -377,21 +406,28 @@ body {
 }
 
 #send-button {
-  background: #ffffff;
-  color: #000000;
   border: none;
-  padding: 12px 20px;
-  border-radius: 8px;
+  padding: 0;
+  background: none;
+  color: #ffffff;
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 0;
+  font-weight: 400;
+  margin-bottom: 8px;
   transition: all 0.15s ease;
-  margin: 0 4px 7px 0;
+}
+
+#send-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 #send-button:hover {
-  background: #f0f0f0;
+  background: rgb(67, 67, 248);
 }
 
 #send-button.disabled,
@@ -406,30 +442,30 @@ body {
 #clear-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background: #2a2a2a;
-  border-color: #2a2a2a;
+  background: none;
   color: #888888;
 }
 
 #clear-button {
-  background: #1a1a1a;
+  background: none;
   color: #ffffff;
-  border: 1px solid #333333;
-  border-radius: 8px;
-  padding: 12px 16px;
+  border: none;
+  border-radius: 999px;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 8px;
+  margin-right: 8px;
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 5px;
-  margin-bottom: 7px;
 }
 
 #clear-button:hover {
   background: #dc3545;
-  border-color: #dc3545;
 }
 
 #clear-button svg {
