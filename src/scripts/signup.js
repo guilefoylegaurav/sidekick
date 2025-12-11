@@ -1,4 +1,6 @@
-// Simple client-side signup handling using chrome.storage.local
+// Simple server-side signup handling using the backend API
+
+import { API_SIGNUP_ENDPOINT } from './modules/constants.js';
 
 const form = document.getElementById('signup-form');
 const nameInput = document.getElementById('name');
@@ -69,8 +71,38 @@ function validateInputs() {
   return null;
 }
 
+async function performSignup(email, password) {
+  const body = { email, password };
+
+  const response = await fetch(API_SIGNUP_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (e) {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const message = (data && data.message) || 'Signup failed. Please try again.';
+    throw new Error(message);
+  }
+
+  if (!data || !data.user) {
+    throw new Error('Signup response did not include a user object.');
+  }
+
+  return data;
+}
+
 if (form) {
-  form.addEventListener('submit', (event) => {
+  form.addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const validationError = validateInputs();
@@ -79,19 +111,30 @@ if (form) {
       return;
     }
 
-    const user = {
-      email: emailInput.value.trim(),
-      password: passwordInput.value,
-    };
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
 
     setSubmitting(true);
+    // Clear any previous error
+    if (errorEl) {
+      errorEl.textContent = '';
+      errorEl.classList.add('hidden');
+    }
 
     try {
-      // placeholder
+      const data = await performSignup(email, password, name);
+
+      // Show a quick success message, then redirect to login.
+      showSuccess(data.message || 'Account created successfully. Redirecting to login…');
+      setSubmitting(false);
+
+      setTimeout(() => {
+        window.location.href = './login.html';
+      }, 1200);
     } catch (error) {
       console.error('Error signing up user:', error);
       setSubmitting(false);
-      showError('Something went wrong while creating your account.');
+      showError(error.message || 'Something went wrong while creating your account.');
     }
   });
 }
