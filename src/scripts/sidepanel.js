@@ -2,7 +2,7 @@ import { EMPTY_CTAs } from './modules/constants.js';
 import { LLMClient } from './modules/api.js';
 import { MarkdownRenderer } from './modules/markdown.js';
 import { ChromeChatStorage } from './modules/storage.js';
-import { ChatView, InputController, QuickActionsController, TabsSelectionController } from './modules/ui.js';
+import { ChatView, InputController, QuickActionsController, TabsSelectionController, LogoutButtonController } from './modules/ui.js';
 import { TabManager } from './modules/tabManager.js';
 import { PageContentManager } from './modules/pageContentManager.js';
 import { ensureAuthenticated } from './modules/auth.js';
@@ -13,6 +13,7 @@ const sendButton = document.getElementById('send-button');
 const clearButton = document.getElementById('clear-button');
 const quickActionsContainer = document.getElementById('quick-actions');
 const tabsSelectorButton = document.getElementById('tabs-selector-button');
+const logoutButton = document.getElementById('logout-button');
 
 let currentTabId = null;
 const chatStorage = new ChromeChatStorage();
@@ -62,6 +63,12 @@ const tabsSelectionController = new TabsSelectionController({
   button: tabsSelectorButton,
   tabManager,
 });
+
+// Logout button controller for auth
+const logoutButtonController = new LogoutButtonController({
+  button: logoutButton,
+});
+
 
 // Connect TabManager to TabsSelectionController after both are created
 tabManager.onTabIdChange = (tabId) => {

@@ -1,4 +1,7 @@
 // UI-layer classes for the sidepanel
+
+import { JWT_TOKEN_KEY } from "./constants.js";
+
 /**
  * Manages rendering of messages, empty state, quick actions visibility,
  * loading indicator, and scrolling.
@@ -397,4 +400,36 @@ export class TabsSelectionController {
   }
 }
 
+/**
+ * Handles the logout button behavior in the header.
+ */
+export class LogoutButtonController {
+  /**
+   * @param {{ button: HTMLElement | null, onLogout: () => void }} deps
+   */
+  constructor({ button }) {
+    this.button = button;
+    this._bindEvents();
+  }
+
+  _onLogout() {
+    chrome.storage.local.remove([JWT_TOKEN_KEY], () => {
+      window.location.href = './login.html';
+    });
+  }
+
+  _bindEvents() {
+    if (!this.button) return;
+
+    this.button.addEventListener('click', () => {
+      const confirmed = confirm('Sure you wanna log out?');
+      if (!confirmed) {
+        return;
+      }
+
+      this._onLogout();
+
+    });
+  }
+}
 
