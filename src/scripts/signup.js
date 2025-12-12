@@ -130,9 +130,9 @@ if (form) {
 
     try {
       const data = await performSignup(email, password, name);
-
+      setSubmitting(false);
       // Show a quick success message, then redirect to login.
-      showSuccess(data.message || 'Account created successfully. Redirecting to login…');
+      showSuccess('User created successfully. Redirecting to login now');
       setTimeout(() => {
         window.location.href = './login.html';
       }, 3000);

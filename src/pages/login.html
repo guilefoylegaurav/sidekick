@@ -23,6 +23,11 @@
         <p class="empty-subtitle">What was your original face before your parents were born?</p>
       </div>
 
+      <div class="auth-toast">
+        <span id="login-error" class="auth-message auth-error hidden"></span>
+        <span id="login-success" class="auth-message auth-success hidden"></span>
+      </div>
+
       <div id="auth-container">
         <form id="login-form" class="auth-form">
           <div class="auth-field">
@@ -33,9 +38,6 @@
             <label for="password">Password</label>
             <input id="password" name="password" type="password" autocomplete="current-password" required />
           </div>
-
-          <p id="login-error" class="auth-message auth-error hidden"></p>
-          <p id="login-success" class="auth-message auth-success hidden"></p>
 
           <button type="submit" id="login-submit" class="auth-primary-button">Log in</button>
 

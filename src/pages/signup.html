@@ -23,6 +23,11 @@
         <p class="empty-subtitle">The ultimate sidekick for your browsing experience </p>
       </div>
 
+      <div class="auth-toast">
+        <p id="signup-error" class="auth-message auth-error hidden"></p>
+        <p id="signup-success" class="auth-message auth-success hidden"></p>
+      </div>
+
       <div id="auth-container">
         <form id="signup-form" class="auth-form">
           <div class="auth-field">
@@ -37,9 +42,6 @@
             <label for="confirm-password">Confirm password</label>
             <input id="confirm-password" name="confirm-password" type="password" autocomplete="new-password" required />
           </div>
-
-          <p id="signup-error" class="auth-message auth-error hidden"></p>
-          <p id="signup-success" class="auth-message auth-success hidden"></p>
 
           <button type="submit" id="signup-submit" class="auth-primary-button">Sign up</button>
 

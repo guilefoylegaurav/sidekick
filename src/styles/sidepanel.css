@@ -692,14 +692,54 @@ body {
 
 .auth-message {
   font-size: 13px;
-  margin-bottom: 6px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #0f172a;
+  border: 1px solid transparent;
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+  text-align: center;
+}
+
+.auth-message.hidden {
+  opacity: 0;
+  transform: translateY(-4px);
+  padding: 0;
+  border-width: 0;
+  box-shadow: none;
+  font-size: 0;
+  line-height: 0;
+  margin: 0;
+}
+
+.auth-message:not(.hidden) {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.auth-toast {
+  max-width: 360px;
+  margin: 0 auto 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .auth-error {
-  color: #ff6b6b;
+  background-image: linear-gradient(90deg, #f97373, #ef4444, #b91c1c);
+  border-color: #b91c1c;
+  color: #ffffff;
 }
 
 .auth-success {
-  color: #4ade80;
+  background-image: linear-gradient(90deg, #f97316, #fbbf24, #fed7aa);
+  border-color: #f59e0b;
+  color: #ffffff;
 }
 
