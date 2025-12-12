@@ -1,5 +1,5 @@
 {
-  "name": "not clippy",
+  "name": "koan",
   "version": "0.1.0",
   "description": "Browsing experience sidekick",
   "permissions": ["sidePanel", "storage", "tabs", "activeTab", "scripting"],
@@ -20,7 +20,7 @@
     }
   ],
   "action": {
-    "default_title": "not clippy",
+    "default_title": "koan",
     "default_icon": "src/icons/icon.png"
   },
   "icons": {
