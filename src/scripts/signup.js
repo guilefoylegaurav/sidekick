@@ -41,6 +41,13 @@ function setSubmitting(isSubmitting) {
   if (!submitButton) return;
   submitButton.disabled = isSubmitting;
   submitButton.classList.toggle('disabled', isSubmitting);
+
+  if (isSubmitting) {
+    form.classList.add('is-loading');
+  } else {
+    form.classList.remove('is-loading');
+  }
+
 }
 
 function validateInputs() {
@@ -126,11 +133,9 @@ if (form) {
 
       // Show a quick success message, then redirect to login.
       showSuccess(data.message || 'Account created successfully. Redirecting to login…');
-      setSubmitting(false);
-
       setTimeout(() => {
         window.location.href = './login.html';
-      }, 1200);
+      }, 3000);
     } catch (error) {
       console.error('Error signing up user:', error);
       setSubmitting(false);

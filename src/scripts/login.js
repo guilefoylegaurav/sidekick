@@ -39,6 +39,13 @@ function setSubmitting(isSubmitting) {
   if (!submitButton) return;
   submitButton.disabled = isSubmitting;
   submitButton.classList.toggle('disabled', isSubmitting);
+
+  if (isSubmitting) {
+    form.classList.add('is-loading');
+  } else {
+    form.classList.remove('is-loading');
+  }
+
 }
 
 async function performLogin(email, password) {
@@ -105,13 +112,11 @@ if (form) {
           sidekickToken: token
         },
         () => {
-          setSubmitting(false);
-          showSuccess(data.message || `Welcome back, ${user.email}!`);
 
           // Redirect to the main sidepanel after a short delay
           setTimeout(() => {
             window.location.href = './sidepanel.html';
-          }, 1200);
+          }, 3000);
         }
       );
     } catch (error) {
