@@ -1,6 +1,6 @@
 // API communication module for LLM requests
 
-import { API_ENDPOINT, SYSTEM_PROMPT, JWT_TOKEN_KEY } from './constants.js';
+import { API_ENDPOINT, API_YOUTUBE_SUBTITLE_ENDPOINT, SYSTEM_PROMPT, JWT_TOKEN_KEY } from './constants.js';
 
 /**
  * Read the JWT token for the current user from chrome.storage.local.
@@ -101,6 +101,62 @@ export class LLMClient {
 
     const data = await response.json();
     return data.response || data.message || JSON.stringify(data);
+  }
+}
+
+/**
+ * YouTubeClient encapsulates API communication for fetching YouTube subtitles/transcripts.
+ */
+export class YouTubeClient {
+  /**
+   * @param {string} [endpoint]
+   */
+  constructor(endpoint = API_YOUTUBE_SUBTITLE_ENDPOINT) {
+    this.endpoint = endpoint;
+  }
+
+  /**
+   * Fetch just the data the UI cares about for a given YouTube video.
+   * Includes the locally stored JWT as a Bearer token when present.
+   * @param {string} videoId
+   * @param {string} [lang='en']
+   * @returns {Promise<{description: string, transcriptionAsText: string}>}
+   */
+  async getVideoData(videoId, lang = 'en') {
+    if (!videoId || typeof videoId !== 'string') {
+      throw new Error('videoId is required');
+    }
+
+    const token = await getAuthToken();
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const url = new URL(this.endpoint);
+    url.searchParams.set('video_id', videoId);
+    if (lang) {
+      url.searchParams.set('lang', lang);
+    }
+
+    const response = await fetch(url.toString(), { method: 'GET', headers });
+
+    let data = null;
+    try {
+      data = await response.json();
+    } catch (e) {
+      data = null;
+    }
+
+    if (!response.ok) {
+      const message = (data && (data.message || data.error)) || `YouTube subtitles request failed: ${response.status} ${response.statusText}`;
+      throw new Error(message);
+    }
+
+    const description = data?.data?.[0]?.description || '';
+    const transcriptionAsText = data?.transcriptionAsText || '';
+
+    return { description, transcriptionAsText };
   }
 }
 

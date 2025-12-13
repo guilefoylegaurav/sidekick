@@ -13,12 +13,13 @@ export const EMPTY_CTAs = [
   "Be my reading buddy"
 ];
 
-export const API_BASE_URL = 'http://localhost:3000';
+export const API_BASE_URL = 'https://sidekick-backend-gold.vercel.app';
 
 export const API_ENDPOINT = `${API_BASE_URL}/api/get_llm_response`;
 
 export const API_LOGIN_ENDPOINT = `${API_BASE_URL}/api/login`;
 export const API_SIGNUP_ENDPOINT = `${API_BASE_URL}/api/signup`;
+export const API_YOUTUBE_SUBTITLE_ENDPOINT = `${API_BASE_URL}/api/youtube_subtitles`;
 
 export const SYSTEM_PROMPT = `
 You are a helpful sidebar assistant integrated into the user's browser. You have automatic access to the content of the current web page they're viewing.

@@ -1,7 +1,13 @@
 // PageContentManager is responsible for fetching page content
 // for given tab IDs.
 
+import { YouTubeClient } from './api.js';
+
 export class PageContentManager {
+  constructor() {
+    this.youtubeClient = new YouTubeClient();
+  }
+
   /**
    * Fetch page content for a specific tab or the current active tab.
    * @param {number|null} [tabId] - Optional tab ID to fetch content for.
@@ -60,6 +66,28 @@ export class PageContentManager {
             content: '[Content not accessible - restricted URL]'
           });
           continue;
+        }
+
+        // If this is a YouTube URL, prefer backend transcript fetch over content-script extraction.
+        if (this._isYouTubeUrl(tab.url)) {
+          const videoId = this._getYouTubeVideoId(tab.url);
+
+          if (videoId) {
+            const videoData = await this.youtubeClient.getVideoData(videoId, 'en');
+            const description = videoData?.description || '';
+            const transcriptionAsText = videoData?.transcriptionAsText || '';
+
+            tabContents.push({
+              tabId: tab.id,
+              title: tab.title || 'Untitled',
+              content: [
+                `YouTube: ${tab.title || 'Untitled'}`,
+                description ? `Description:\n${description}` : '',
+                transcriptionAsText ? `Transcript:\n${transcriptionAsText}` : '',
+              ].filter(Boolean).join('\n\n')
+            });
+            continue;
+          }
         }
 
         // Try to inject content script if needed
@@ -153,6 +181,56 @@ export class PageContentManager {
            url.startsWith('chrome-extension://') || 
            url.startsWith('edge://') || 
            url.startsWith('about:');
+  }
+
+  /**
+   * Check if a URL is a YouTube watch/shorts link.
+   * @private
+   * @param {string} url
+   * @returns {boolean}
+   */
+  _isYouTubeUrl(url) {
+    try {
+      const parsed = new URL(url);
+      const host = (parsed.hostname || '').toLowerCase();
+      return host === 'youtu.be' || host.endsWith('youtube.com');
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Extract a YouTube video id from a URL.
+   * Supports youtube.com/watch?v=, youtu.be/, youtube.com/shorts/, youtube.com/embed/.
+   * @private
+   * @param {string} url
+   * @returns {string|null}
+   */
+  _getYouTubeVideoId(url) {
+    try {
+      const parsed = new URL(url);
+      const host = (parsed.hostname || '').toLowerCase();
+
+      if (host === 'youtu.be') {
+        const id = (parsed.pathname || '').split('/').filter(Boolean)[0];
+        return id || null;
+      }
+
+      if (host.endsWith('youtube.com')) {
+        const v = parsed.searchParams.get('v');
+        if (v) return v;
+
+        const parts = (parsed.pathname || '').split('/').filter(Boolean);
+        // /shorts/:id or /embed/:id or /v/:id
+        if (parts[0] === 'shorts' || parts[0] === 'embed' || parts[0] === 'v') {
+          return parts[1] || null;
+        }
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   /**
