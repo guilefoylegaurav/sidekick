@@ -13,7 +13,7 @@ export const EMPTY_CTAs = [
   "Be my reading buddy"
 ];
 
-export const API_BASE_URL = 'http://localhost:3000';
+export const API_BASE_URL = 'https://sidekick-backend-gold.vercel.app/';
 
 export const API_ENDPOINT = `${API_BASE_URL}/api/get_llm_response`;
 
