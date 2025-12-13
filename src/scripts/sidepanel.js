@@ -120,8 +120,18 @@ function loadTabData() {
 }
 
 function showEmptyState() {
-  const randomCTA = EMPTY_CTAs[Math.floor(Math.random() * EMPTY_CTAs.length)];
-  chatView.showEmptyState(randomCTA);
+  tabManager.getCurrentTab().then((tab) => {
+    const url = tab?.url || '';
+    const isYouTube = /(^|\/\/)(www\.)?(youtube\.com|youtu\.be)\//i.test(url);
+
+    if (isYouTube) {
+      chatView.showEmptyState("Chat with YouTube videos too", "What's on this video?");
+      return;
+    }
+
+    const randomCTA = EMPTY_CTAs[Math.floor(Math.random() * EMPTY_CTAs.length)];
+    chatView.showEmptyState(randomCTA);
+  });
 }
 
 // Request page content when the side panel loads

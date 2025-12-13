@@ -33,7 +33,7 @@ export class ChatView {
    * Shows the empty state with a given CTA message.
    * @param {string} ctaText
    */
-  showEmptyState(ctaText) {
+  showEmptyState(ctaText, ctaSubtext = 'Ask me anything about this page') {
     if (!this.messagesContainer) {
       return;
     }
@@ -48,7 +48,7 @@ export class ChatView {
           </svg>
         </div>
         <p class="empty-message">${ctaText}</p>
-        <p class="empty-subtitle">Ask me anything about this page</p>
+        <p class="empty-subtitle">${ctaSubtext}</p>
       </div>
     `;
 

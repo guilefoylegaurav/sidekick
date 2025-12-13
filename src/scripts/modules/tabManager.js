@@ -16,6 +16,11 @@ export class TabManager {
     this.onActiveTabChange = onActiveTabChange;
     this.onTabRefreshed = onTabRefreshed;
 
+    /** @type {number|null} */
+    this.currentTabId = null;
+    /** @type {{id: number, title: string, url: string}|null} */
+    this.currentTab = null;
+
     this._handleTabActivated = this._handleTabActivated.bind(this);
     this._handleRuntimeMessage = this._handleRuntimeMessage.bind(this);
   }
@@ -27,6 +32,7 @@ export class TabManager {
     // Get current tab ID
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
+        this._setCurrentTab(tabs[0]);
         this.onTabIdChange(tabs[0].id);
         if (typeof this.onActiveTabChange === 'function') {
           this.onActiveTabChange();
@@ -46,10 +52,18 @@ export class TabManager {
    * @param {{tabId: number}} activeInfo
    */
   _handleTabActivated(activeInfo) {
-    this.onTabIdChange(activeInfo.tabId);
-    if (typeof this.onActiveTabChange === 'function') {
-      this.onActiveTabChange();
-    }
+    this.currentTabId = activeInfo.tabId;
+    chrome.tabs.get(activeInfo.tabId, (tab) => {
+      if (tab) {
+        this._setCurrentTab(tab);
+      } else {
+        this.currentTab = null;
+      }
+      this.onTabIdChange(activeInfo.tabId);
+      if (typeof this.onActiveTabChange === 'function') {
+        this.onActiveTabChange();
+      }
+    });
   }
 
   /**
@@ -59,12 +73,48 @@ export class TabManager {
     if (request.action === 'tabRefreshed') {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0] && tabs[0].id === request.tabId) {
+          this._setCurrentTab(tabs[0]);
           if (typeof this.onTabRefreshed === 'function') {
             this.onTabRefreshed();
           }
         }
       });
     }
+  }
+
+  /**
+   * Get the current active tab (id/title/url) for CTA decisions.
+   * @returns {Promise<{id: number, title: string, url: string} | null>}
+   */
+  async getCurrentTab() {
+    if (!!this.currentTab) {
+      return this.currentTab;
+    }
+
+    return new Promise((resolve) => {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs && tabs[0]) {
+          this._setCurrentTab(tabs[0]);
+          resolve(this.currentTab);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  /**
+   * @private
+   * @param {{id?: number, title?: string, url?: string}} tab
+   */
+  _setCurrentTab(tab) {
+    if (!tab || typeof tab.id !== 'number') return;
+    this.currentTabId = tab.id;
+    this.currentTab = {
+      id: tab.id,
+      title: tab.title || '',
+      url: tab.url || '',
+    };
   }
 
   /**
