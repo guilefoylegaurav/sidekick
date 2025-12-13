@@ -1,6 +1,7 @@
 // API communication module for LLM requests
 
 import { API_ENDPOINT, API_YOUTUBE_SUBTITLE_ENDPOINT, SYSTEM_PROMPT, JWT_TOKEN_KEY } from './constants.js';
+import { Cache } from './cache.js';
 
 /**
  * Read the JWT token for the current user from chrome.storage.local.
@@ -113,6 +114,7 @@ export class YouTubeClient {
    */
   constructor(endpoint = API_YOUTUBE_SUBTITLE_ENDPOINT) {
     this.endpoint = endpoint;
+    this.cache = new Cache({ key: 'yt_video_data_cache_v1', storage: 'session', maxEntries: 6 });
   }
 
   /**
@@ -125,6 +127,11 @@ export class YouTubeClient {
   async getVideoData(videoId, lang = 'en') {
     if (!videoId || typeof videoId !== 'string') {
       throw new Error('videoId is required');
+    }
+
+    const cached = this.cache.get(videoId);
+    if (cached) {
+      return cached;
     }
 
     const token = await getAuthToken();
@@ -156,7 +163,9 @@ export class YouTubeClient {
     const description = data?.data?.[0]?.description || '';
     const transcriptionAsText = data?.transcriptionAsText || '';
 
-    return { description, transcriptionAsText };
+    const result = { description, transcriptionAsText };
+    this.cache.set(videoId, result);
+    return result;
   }
 }
 

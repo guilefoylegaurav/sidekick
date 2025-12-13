@@ -23,7 +23,7 @@ export class ChromeChatStorage {
    * @param {chrome.storage.StorageArea} [storageArea]
    * @param {string} [storageKeyPrefix]
    */
-  constructor(storageArea = chrome.storage.local, storageKeyPrefix = 'messages_') {
+  constructor(storageArea = chrome.storage.session, storageKeyPrefix = 'messages_') {
     this.storageArea = storageArea;
     this.storageKeyPrefix = storageKeyPrefix;
   }
