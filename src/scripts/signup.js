@@ -63,12 +63,28 @@ function validateInputs() {
     return 'Please fill in all fields.';
   }
 
-  if (!email.includes('@')) {
-    return 'Please enter a valid email.';
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return 'Please enter a valid email address.';
   }
 
   if (password.length < 6) {
-    return 'Password must be at least 6 characters.';
+    return 'Password must be at least 6 characters long.';
+  }
+  if (/\s/.test(password)) {
+    return 'Password cannot contain spaces.';
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must contain at least one uppercase letter.';
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'Password must contain at least one lowercase letter.';
+  }
+  if (!/[0-9]/.test(password)) {
+    return 'Password must contain at least one number.';
+  }
+  if (!/[!@#$%^&*(),.?":{}|<>_\-\[\]\\\/;'`~+=]/.test(password)) {
+    return 'Password must contain at least one special character.';
   }
 
   if (password !== confirmPassword) {
