@@ -28,6 +28,7 @@ const chatView = new ChatView({
   userInput,
   sendButton,
   clearButton,
+  contextButton: tabsSelectorButton,
   markdownRenderer,
 });
 
@@ -212,7 +213,14 @@ async function getLLMResponse(userMessage) {
     // Get all prior messages from storage using the helper function
     const messages = await getSavedMessages();
 
-    const pageContent = await pageContentManager.fetchContent(tabsSelectionController.getSelectedTabIds());
+    const tabIds = tabsSelectionController.getSelectedTabIds();
+
+    if (tabIds.length > 10) {
+      confirm('You can choose at most ten tabs. Taking the first ten tabs selected.');
+      tabIds = tabIds.slice(0, 10);
+    }
+
+    const pageContent = await pageContentManager.fetchContent(tabIds);
     
     // Fetch LLM response using the LLM client
     const llmResponse = await llmClient.getResponse(userMessage, pageContent, messages);

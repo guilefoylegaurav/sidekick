@@ -113,7 +113,7 @@ async function performSignup(email, password) {
   }
 
   if (!response.ok) {
-    const message = (data && data.message) || 'Signup failed. Please try again.';
+    const message = (data && (data.message || data.error)) || 'Signup failed. Please try again.';
     throw new Error(message);
   }
 

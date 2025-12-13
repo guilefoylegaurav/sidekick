@@ -137,6 +137,17 @@ body {
 .context-actions .icon-button:hover {
   background: #f97316;
 }
+
+.context-actions .icon-button.disabled,
+.context-actions .icon-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.context-actions .icon-button:disabled:hover,
+.context-actions .icon-button.disabled:hover {
+  background: none;
+}
 .header-menu-item {
   width: 100%;
   padding: 8px 14px;

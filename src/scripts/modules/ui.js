@@ -8,14 +8,15 @@ import { JWT_TOKEN_KEY } from "./constants.js";
  */
 export class ChatView {
   /**
-   * @param {{messagesContainer: HTMLElement, quickActionsContainer: HTMLElement|null, userInput: HTMLTextAreaElement, sendButton: HTMLButtonElement, clearButton: HTMLButtonElement, markdownRenderer: { formatMessageWithCode: (message: string, containerElement: HTMLElement | null) => string }}} deps
+   * @param {{messagesContainer: HTMLElement, quickActionsContainer: HTMLElement|null, userInput: HTMLTextAreaElement, sendButton: HTMLButtonElement, clearButton: HTMLButtonElement, contextButton?: HTMLButtonElement|null, markdownRenderer: { formatMessageWithCode: (message: string, containerElement: HTMLElement | null) => string }}} deps
    */
-  constructor({ messagesContainer, quickActionsContainer, userInput, sendButton, clearButton, markdownRenderer }) {
+  constructor({ messagesContainer, quickActionsContainer, userInput, sendButton, clearButton, contextButton = null, markdownRenderer }) {
     this.messagesContainer = messagesContainer;
     this.quickActionsContainer = quickActionsContainer;
     this.userInput = userInput;
     this.sendButton = sendButton;
     this.clearButton = clearButton;
+    this.contextButton = contextButton;
     this.markdownRenderer = markdownRenderer;
     this._originalPlaceholder = userInput ? userInput.placeholder : '';
   }
@@ -127,7 +128,7 @@ export class ChatView {
    * @param {boolean} isDisabled
    */
   setButtonsDisabled(isDisabled) {
-    [this.sendButton, this.clearButton].forEach((button) => {
+    [this.sendButton, this.clearButton, this.contextButton].forEach((button) => {
       if (!button) return;
       button.disabled = isDisabled;
       button.classList.toggle('disabled', isDisabled);
@@ -289,7 +290,7 @@ export class TabsSelectionController {
   /**
    * @param {{ button: HTMLElement | null, tabManager: { getAllTabs: () => Promise<Array<{id: number, title: string}>> }, maxTabs?: number }} deps
    */
-  constructor({ button, tabManager, maxTabs = 6 }) {
+  constructor({ button, tabManager, maxTabs = 100 }) {
     this.button = button;
     this.tabManager = tabManager;
     this.maxTabs = maxTabs;

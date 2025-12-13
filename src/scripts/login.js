@@ -8,6 +8,23 @@ const passwordInput = document.getElementById('password');
 const errorEl = document.getElementById('login-error');
 const successEl = document.getElementById('login-success');
 const submitButton = document.getElementById('login-submit');
+const koanEl = document.getElementById('login-koan');
+
+const ZEN_KOANS = [
+  "What was your original face before your parents were born?",
+  "What is the sound of one hand clapping?",
+  "Show me your face before you were born.",
+  "When you can do nothing, what can you do?",
+  "In the midst of chaos, where is the stillness?",
+  "If everything is empty, what is this?",
+  "Where do your thoughts go when you stop chasing them?",
+];
+
+// Pick a random koan each time the page loads.
+if (koanEl) {
+  const idx = Math.floor(Math.random() * ZEN_KOANS.length);
+  koanEl.textContent = ZEN_KOANS[idx];
+}
 
 /**
  * Show an error message in the login form.
@@ -65,7 +82,7 @@ async function performLogin(email, password) {
   }
 
   if (!response.ok) {
-    const message = (data && data.message) || 'Login failed. Please try again.';
+    const message = (data && (data.message || data.error)) || 'Login failed. Please try again.';
     throw new Error(message);
   }
 
