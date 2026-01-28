@@ -25,6 +25,12 @@ function resetRegistry() {
   return registry;
 }
 
+function getElementById(elementId) {
+  if (!elementId || typeof elementId !== 'string') return null;
+  const registry = getOrCreateRegistry();
+  return registry.elementsById.get(elementId) || null;
+}
+
 function isElementVisible(element, includeOffscreen) {
   if (!element || element.nodeType !== 1) return false;
   const style = window.getComputedStyle(element);
@@ -197,6 +203,58 @@ function collectInteractiveElements(options) {
   return elements;
 }
 
+function resolveTargetElement(target) {
+  if (!target) return { element: null, error: 'Missing target' };
+
+  if (typeof target === 'string') {
+    const element = document.querySelector(target);
+    return element ? { element } : { element: null, error: 'Target not found' };
+  }
+
+  const elementId = target.elementId || '';
+  if (elementId) {
+    const element = getElementById(elementId);
+    if (element) return { element, elementId };
+  }
+
+  const selector = target.selector || '';
+  if (selector) {
+    const element = document.querySelector(selector);
+    return element ? { element, selector } : { element: null, error: 'Target not found' };
+  }
+
+  return { element: null, error: 'Unsupported target' };
+}
+
+function performClick(target, options = {}) {
+  const { element, elementId, selector, error } = resolveTargetElement(target);
+  if (!element) {
+    return { ok: false, error: error || 'Target not found' };
+  }
+
+  const scrollIntoView = options.scrollIntoView !== false;
+  if (scrollIntoView) {
+    element.scrollIntoView({ block: 'center', inline: 'center' });
+  }
+
+  const rect = element.getBoundingClientRect();
+  const isVisible = rect.width > 0 && rect.height > 0;
+  if (!isVisible) {
+    return { ok: false, error: 'Target not visible', elementId, selector };
+  }
+
+  element.focus({ preventScroll: true });
+  element.click();
+
+  return {
+    ok: true,
+    elementId,
+    selector,
+    tag: element.tagName.toLowerCase(),
+    timestamp: Date.now(),
+  };
+}
+
 function buildPageSnapshot(requestOptions = {}) {
   const options = { ...DEFAULT_SNAPSHOT_OPTIONS, ...requestOptions };
   const visibleText = document.body ? document.body.innerText || '' : '';
@@ -223,6 +281,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'getPageSnapshot') {
     const snapshot = buildPageSnapshot(request.options || {});
     sendResponse({ snapshot });
+  } else if (request.action === 'performClick') {
+    const result = performClick(request.target, request.options || {});
+    sendResponse({ result });
   } else if (request.action === 'ping') {
     // Respond to ping to indicate content script is present
     sendResponse({ status: 'ready' });

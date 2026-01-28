@@ -68,6 +68,30 @@ export class PageContentManager {
   }
 
   /**
+   * Perform a click on a target element in a specific tab or the current active tab.
+   * @param {number|null} [tabId] - Tab ID to target.
+   * @param {{elementId?: string, selector?: string}|string} target - Target element reference.
+   * @param {object} [options] - Click options (scrollIntoView).
+   * @returns {Promise<object>} - Result payload { ok, error?, ... }.
+   */
+  async performClick(tabId, target, options = {}) {
+    console.log("Performing click for tab:", tabId, target);
+    return new Promise((resolve) => {
+      const message = { action: 'performClick', target, options };
+      message.tabId = tabId;
+      
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn("Runtime error performing click:", chrome.runtime.lastError.message);
+          resolve({ ok: false, error: chrome.runtime.lastError.message });
+          return;
+        }
+        resolve(response.result);
+      });
+    });
+  }
+
+  /**
    * Fetch page content for multiple tabs.
    * @param {number[]} tabIds - Array of tab IDs to fetch content for.
    * @returns {Promise<Array<{tabId: number, title: string, content: string}>>} - Array of tab content objects.

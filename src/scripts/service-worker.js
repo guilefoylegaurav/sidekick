@@ -72,6 +72,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     return true; // Required for asynchronous sendResponse
   }
+
+  if (request.action === "performClick") {
+    const targetTabId = request.tabId;
+    const target = request.target || null;
+    const options = request.options || {};
+
+    const sendRequestToTab = (tabId) => {
+      chrome.tabs.sendMessage(tabId, { action: "performClick", target, options }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn("Error sending click request to tab", tabId, ":", chrome.runtime.lastError.message);
+          sendResponse({ result: { ok: false, error: chrome.runtime.lastError.message } });
+        } else if (response && response.result) {
+          sendResponse(response);
+        } else {
+          sendResponse({ result: { ok: false, error: 'No response' }});
+        }
+      });
+    };
+    sendRequestToTab(targetTabId);
+    return true;
+  }
 });
 
 // Listen for tab updates to detect refreshes
