@@ -38,6 +38,36 @@ export class PageContentManager {
   }
 
   /**
+   * Fetch a structured page snapshot for a specific tab or the current active tab.
+   * @param {number|null} [tabId] - Optional tab ID to fetch snapshot for.
+   * @param {object} [options] - Snapshot options (maxTextLength, maxElements, includeOffscreen, includeValues).
+   * @returns {Promise<object|null>} - The snapshot object or null on failure.
+   */
+  async fetchPageSnapshot(tabId = null, options = {}) {
+    console.log("Fetching page snapshot for tab:", tabId);
+    return new Promise((resolve) => {
+      const message = { action: 'requestPageSnapshot', options };
+      if (tabId !== null && tabId !== undefined) {
+        message.tabId = tabId;
+      }
+
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn("Runtime error fetching snapshot:", chrome.runtime.lastError.message);
+          resolve(null);
+          return;
+        }
+
+        if (response && response.snapshot) {
+          resolve(response.snapshot);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  /**
    * Fetch page content for multiple tabs.
    * @param {number[]} tabIds - Array of tab IDs to fetch content for.
    * @returns {Promise<Array<{tabId: number, title: string, content: string}>>} - Array of tab content objects.

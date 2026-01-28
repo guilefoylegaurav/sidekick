@@ -39,6 +39,39 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     return true; // Required for asynchronous sendResponse
   }
+
+  if (request.action === "requestPageSnapshot") {
+    const targetTabId = request.tabId;
+    const options = request.options || {};
+
+    const sendRequestToTab = (tabId) => {
+      if (!tabId && tabId !== 0) {
+        sendResponse({ snapshot: null });
+        return;
+      }
+      chrome.tabs.sendMessage(tabId, { action: "getPageSnapshot", options }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn("Error sending snapshot request to tab", tabId, ":", chrome.runtime.lastError.message);
+          sendResponse({ snapshot: null, error: chrome.runtime.lastError.message });
+        } else {
+          sendResponse(response || { snapshot: null });
+        }
+      });
+    };
+
+    if (typeof targetTabId === 'number') {
+      sendRequestToTab(targetTabId);
+    } else {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          sendRequestToTab(tabs[0].id);
+        } else {
+          sendResponse({ snapshot: null });
+        }
+      });
+    }
+    return true; // Required for asynchronous sendResponse
+  }
 });
 
 // Listen for tab updates to detect refreshes

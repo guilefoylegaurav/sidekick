@@ -1,9 +1,230 @@
+const KOAN_REGISTRY_KEY = '__koanElementRegistry';
+const DEFAULT_SNAPSHOT_OPTIONS = {
+  maxTextLength: 12000,
+  maxElements: 80,
+  includeOffscreen: false,
+  includeValues: false,
+};
+
+function getOrCreateRegistry() {
+  if (!window[KOAN_REGISTRY_KEY]) {
+    window[KOAN_REGISTRY_KEY] = {
+      nextId: 1,
+      elementsById: new Map(),
+      lastSnapshotAt: 0,
+    };
+  }
+  return window[KOAN_REGISTRY_KEY];
+}
+
+function resetRegistry() {
+  const registry = getOrCreateRegistry();
+  registry.nextId = 1;
+  registry.elementsById = new Map();
+  registry.lastSnapshotAt = Date.now();
+  return registry;
+}
+
+function isElementVisible(element, includeOffscreen) {
+  if (!element || element.nodeType !== 1) return false;
+  const style = window.getComputedStyle(element);
+  if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+    return false;
+  }
+  const rect = element.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) return false;
+  if (includeOffscreen) return true;
+  const inViewport = rect.bottom >= 0 && rect.right >= 0 && rect.top <= window.innerHeight && rect.left <= window.innerWidth;
+  return inViewport;
+}
+
+function truncateText(text, maxLength) {
+  if (!text || typeof text !== 'string') return '';
+  if (!maxLength || text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + '...';
+}
+
+function getLabelFromAria(element) {
+  const ariaLabel = element.getAttribute('aria-label');
+  if (ariaLabel) return ariaLabel.trim();
+  const ariaLabelledBy = element.getAttribute('aria-labelledby');
+  if (ariaLabelledBy) {
+    const ids = ariaLabelledBy.split(/\s+/).filter(Boolean);
+    const labelText = ids
+      .map((id) => {
+        const labelEl = document.getElementById(id);
+        return labelEl ? labelEl.textContent.trim() : '';
+      })
+      .filter(Boolean)
+      .join(' ');
+    if (labelText) return labelText;
+  }
+  return '';
+}
+
+function getLabelForInput(element) {
+  if (!element || !element.id) return '';
+  const label = document.querySelector(`label[for="${CSS.escape(element.id)}"]`);
+  if (label && label.textContent) {
+    return label.textContent.trim();
+  }
+  return '';
+}
+
+function getElementLabel(element) {
+  const ariaLabel = getLabelFromAria(element);
+  if (ariaLabel) return ariaLabel;
+
+  const labelForInput = getLabelForInput(element);
+  if (labelForInput) return labelForInput;
+
+  if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+    const placeholder = element.getAttribute('placeholder');
+    if (placeholder) return placeholder.trim();
+    const name = element.getAttribute('name');
+    if (name) return name.trim();
+  }
+
+  const text = element.textContent || '';
+  return text.trim();
+}
+
+function buildSelector(element) {
+  if (!element || element.nodeType !== 1) return '';
+  if (element.id) return `#${CSS.escape(element.id)}`;
+
+  const parts = [];
+  let current = element;
+  while (current && current.nodeType === 1 && current !== document.body) {
+    let part = current.tagName.toLowerCase();
+    if (current.classList && current.classList.length > 0) {
+      part += `.${CSS.escape(current.classList[0])}`;
+    }
+
+    const parent = current.parentElement;
+    if (parent) {
+      const sameTagSiblings = Array.from(parent.children).filter((child) => child.tagName === current.tagName);
+      if (sameTagSiblings.length > 1) {
+        const index = sameTagSiblings.indexOf(current) + 1;
+        part += `:nth-of-type(${index})`;
+      }
+    }
+
+    parts.unshift(part);
+    if (parent && parent.id) {
+      parts.unshift(`#${CSS.escape(parent.id)}`);
+      break;
+    }
+    current = parent;
+  }
+
+  return parts.join(' > ');
+}
+
+function collectInteractiveElements(options) {
+  const selectors = [
+    'a[href]',
+    'button',
+    'input',
+    'textarea',
+    'select',
+    '[role="button"]',
+    '[role="link"]',
+    '[role="menuitem"]',
+    '[contenteditable="true"]',
+    '[tabindex]:not([tabindex="-1"])',
+  ];
+
+  const registry = resetRegistry();
+  const nodes = Array.from(document.querySelectorAll(selectors.join(',')));
+
+  const elements = [];
+  for (const element of nodes) {
+    if (elements.length >= options.maxElements) break;
+    if (!isElementVisible(element, options.includeOffscreen)) continue;
+
+    if (element.tagName === 'INPUT') {
+      const type = (element.getAttribute('type') || '').toLowerCase();
+      if (type === 'hidden') continue;
+    }
+
+    const elementId = `el-${registry.nextId++}`;
+    registry.elementsById.set(elementId, element);
+
+    const rect = element.getBoundingClientRect();
+    const label = getElementLabel(element);
+    const tag = element.tagName.toLowerCase();
+    const type = element.getAttribute('type') || '';
+    const role = element.getAttribute('role') || '';
+    const placeholder = element.getAttribute('placeholder') || '';
+    const name = element.getAttribute('name') || '';
+    const href = tag === 'a' ? element.getAttribute('href') || '' : '';
+    const selector = buildSelector(element);
+
+    const entry = {
+      elementId,
+      tag,
+      type,
+      role,
+      label,
+      text: (element.textContent || '').trim(),
+      placeholder,
+      name,
+      id: element.id || '',
+      href,
+      selector,
+      rect: {
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      },
+    };
+
+    if (options.includeValues) {
+      const isPassword = tag === 'input' && type.toLowerCase() === 'password';
+      if (!isPassword && (tag === 'input' || tag === 'textarea' || tag === 'select')) {
+        entry.value = element.value || '';
+      }
+      if (element.isContentEditable) {
+        entry.value = element.textContent || '';
+      }
+    }
+
+    elements.push(entry);
+  }
+
+  return elements;
+}
+
+function buildPageSnapshot(requestOptions = {}) {
+  const options = { ...DEFAULT_SNAPSHOT_OPTIONS, ...requestOptions };
+  const visibleText = document.body ? document.body.innerText || '' : '';
+
+  return {
+    url: window.location.href,
+    title: document.title || '',
+    viewport: {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio || 1,
+    },
+    visibleText: truncateText(visibleText, options.maxTextLength),
+    interactiveElements: collectInteractiveElements(options),
+    truncated: visibleText.length > options.maxTextLength,
+    generatedAt: Date.now(),
+  };
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "getPageContent") {
-    const pageContent = document.body.innerText;
+  if (request.action === 'getPageContent') {
+    const pageContent = document.body ? document.body.innerText || '' : '';
     sendResponse({ content: pageContent });
-  } else if (request.action === "ping") {
+  } else if (request.action === 'getPageSnapshot') {
+    const snapshot = buildPageSnapshot(request.options || {});
+    sendResponse({ snapshot });
+  } else if (request.action === 'ping') {
     // Respond to ping to indicate content script is present
-    sendResponse({ status: "ready" });
+    sendResponse({ status: 'ready' });
   }
 });
