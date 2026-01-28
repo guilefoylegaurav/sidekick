@@ -255,6 +255,130 @@ function performClick(target, options = {}) {
   };
 }
 
+function setNativeValue(element, value) {
+  const valueSetter = Object.getOwnPropertyDescriptor(element, 'value')?.set;
+  const prototype = Object.getPrototypeOf(element);
+  const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
+  if (prototypeValueSetter && valueSetter !== prototypeValueSetter) {
+    prototypeValueSetter.call(element, value);
+    return;
+  }
+  if (valueSetter) {
+    valueSetter.call(element, value);
+    return;
+  }
+  element.value = value;
+}
+
+function getTypeOptions(options = {}) {
+  return {
+    scrollIntoView: options.scrollIntoView !== false,
+    shouldAppend: options.append === true || options.clear === false,
+  };
+}
+
+function focusForTyping(element, scrollIntoView) {
+  if (scrollIntoView) {
+    element.scrollIntoView({ block: 'center', inline: 'center' });
+  }
+  element.focus({ preventScroll: true });
+}
+
+function dispatchInputEvents(element) {
+  element.dispatchEvent(new Event('input', { bubbles: true }));
+  element.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function isUnsupportedInputType(type) {
+  const unsupported = ['checkbox', 'radio', 'button', 'submit', 'reset', 'file', 'image', 'range', 'color'];
+  return unsupported.includes(type);
+}
+
+function buildTypeResult(element, elementId, selector, valueLength, appended, type = '') {
+  const result = {
+    ok: true,
+    elementId,
+    selector,
+    tag: element.tagName.toLowerCase(),
+    valueLength,
+    appended,
+    timestamp: Date.now(),
+  };
+
+  if (type) {
+    result.type = type;
+  }
+
+  return result;
+}
+
+function typeIntoTextInput(element, value, meta, options) {
+  const type = (element.getAttribute('type') || '').toLowerCase();
+  if (isUnsupportedInputType(type)) {
+    return { ok: false, error: 'Unsupported input type', elementId: meta.elementId, selector: meta.selector };
+  }
+
+  focusForTyping(element, options.scrollIntoView);
+  const currentValue = element.value || '';
+  const nextValue = options.shouldAppend ? currentValue + value : value;
+  setNativeValue(element, nextValue);
+  dispatchInputEvents(element);
+
+  return buildTypeResult(element, meta.elementId, meta.selector, nextValue.length, options.shouldAppend, type);
+}
+
+function typeIntoSelect(element, value, meta, options) {
+  focusForTyping(element, options.scrollIntoView);
+  setNativeValue(element, value);
+  dispatchInputEvents(element);
+
+  return buildTypeResult(element, meta.elementId, meta.selector, value.length, false);
+}
+
+function typeIntoContentEditable(element, value, meta, options) {
+  focusForTyping(element, options.scrollIntoView);
+  const currentValue = element.textContent || '';
+  const nextValue = options.shouldAppend ? currentValue + value : value;
+  element.textContent = nextValue;
+  dispatchInputEvents(element);
+
+  return buildTypeResult(element, meta.elementId, meta.selector, nextValue.length, options.shouldAppend);
+}
+
+function performType(target, text, options = {}) {
+  const { element, elementId, selector, error } = resolveTargetElement(target);
+  if (!element) {
+    return { ok: false, error: error || 'Target not found' };
+  }
+
+  if (text === undefined || text === null) {
+    return { ok: false, error: 'Missing text' };
+  }
+
+  if (element.disabled) {
+    return { ok: false, error: 'Target disabled', elementId, selector };
+  }
+
+  const value = String(text);
+  const tag = element.tagName.toLowerCase();
+  const resolvedOptions = getTypeOptions(options);
+  const meta = { elementId, selector };
+
+  if (tag === 'input' || tag === 'textarea') {
+    return typeIntoTextInput(element, value, meta, resolvedOptions);
+  }
+
+  if (tag === 'select') {
+    return typeIntoSelect(element, value, meta, resolvedOptions);
+  }
+
+  if (element.isContentEditable) {
+    return typeIntoContentEditable(element, value, meta, resolvedOptions);
+  }
+
+  return { ok: false, error: 'Target not text-input capable', elementId, selector };
+}
+
 function buildPageSnapshot(requestOptions = {}) {
   const options = { ...DEFAULT_SNAPSHOT_OPTIONS, ...requestOptions };
   const visibleText = document.body ? document.body.innerText || '' : '';
@@ -283,6 +407,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ snapshot });
   } else if (request.action === 'performClick') {
     const result = performClick(request.target, request.options || {});
+    sendResponse({ result });
+  } else if (request.action === 'performType') {
+    const result = performType(request.target, request.text, request.options || {});
     sendResponse({ result });
   } else if (request.action === 'ping') {
     // Respond to ping to indicate content script is present

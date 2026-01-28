@@ -92,6 +92,31 @@ export class PageContentManager {
   }
 
   /**
+   * Perform a type action on a target element in a specific tab.
+   * @param {number|null} [tabId] - Tab ID to target.
+   * @param {{elementId?: string, selector?: string}|string} target - Target element reference.
+   * @param {string} text - Text to enter.
+   * @param {object} [options] - Type options (append, clear, scrollIntoView).
+   * @returns {Promise<object>} - Result payload { ok, error?, ... }.
+   */
+  async performType(tabId, target, text, options = {}) {
+    console.log("Performing type for tab:", tabId, target);
+    return new Promise((resolve) => {
+      const message = { action: 'performType', target, text, options };
+      message.tabId = tabId;
+
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn("Runtime error performing type:", chrome.runtime.lastError.message);
+          resolve({ ok: false, error: chrome.runtime.lastError.message });
+          return;
+        }
+        resolve(response.result);
+      });
+    });
+  }
+
+  /**
    * Fetch page content for multiple tabs.
    * @param {number[]} tabIds - Array of tab IDs to fetch content for.
    * @returns {Promise<Array<{tabId: number, title: string, content: string}>>} - Array of tab content objects.

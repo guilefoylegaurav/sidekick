@@ -93,6 +93,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendRequestToTab(targetTabId);
     return true;
   }
+
+  if (request.action === "performType") {
+    const targetTabId = request.tabId;
+    const target = request.target || null;
+    const text = request.text;
+    const options = request.options || {};
+
+    const sendRequestToTab = (tabId) => {
+      chrome.tabs.sendMessage(tabId, { action: "performType", target, text, options }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn("Error sending type request to tab", tabId, ":", chrome.runtime.lastError.message);
+          sendResponse({ result: { ok: false, error: chrome.runtime.lastError.message } });
+        } else if (response && response.result) {
+          sendResponse(response);
+        } else {
+          sendResponse({ result: { ok: false, error: 'No response' }});
+        }
+      });
+    };
+    sendRequestToTab(targetTabId);
+    return true;
+  }
 });
 
 // Listen for tab updates to detect refreshes
