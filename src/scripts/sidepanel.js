@@ -20,6 +20,7 @@ const chatStorage = new ChromeChatStorage();
 const llmClient = new LLMClient();
 const markdownRenderer = new MarkdownRenderer();
 const pageContentManager = new PageContentManager();
+const MAX_TOOL_STEPS = 10;
 
 // UI layer instances
 const chatView = new ChatView({
@@ -205,6 +206,111 @@ function handleTabRefresh() {
   clearConversation(true);
 }
 
+function parseToolCallFromText(text) {
+  if (!text || typeof text !== 'string') return null;
+  const jsonText = extractJsonObject(text);
+  if (!jsonText) return null;
+
+  try {
+    const parsed = JSON.parse(jsonText);
+    const tool = parsed.tool || parsed.name;
+    if (!tool) return null;
+    const args = parsed.args || parsed.arguments || {};
+    return { tool, args };
+  } catch (error) {
+    return null;
+  }
+}
+
+function getToolActionLabel(toolCall) {
+  if (!toolCall) return null;
+  const actionLabel = toolCall.args?.action_label;
+  if (typeof actionLabel === 'string' && actionLabel.trim()) {
+    return actionLabel.trim();
+  }
+  const toolName = toolCall.tool || 'tool';
+  return `Running ${toolName.replace(/_/g, ' ')}`;
+}
+
+function extractJsonObject(text) {
+  const trimmed = text.trim();
+  const fencedMatch = trimmed.match(/```json\s*([\s\S]*?)```/i);
+  if (fencedMatch) {
+    return fencedMatch[1].trim();
+  }
+
+  const startIndex = trimmed.indexOf('{');
+  if (startIndex === -1) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = startIndex; i < trimmed.length; i += 1) {
+    const char = trimmed[i];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === '\\') {
+        escaped = true;
+      } else if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === '{') {
+      depth += 1;
+    } else if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return trimmed.slice(startIndex, i + 1).trim();
+      }
+    }
+  }
+
+  return null;
+}
+
+async function executeToolCall(toolCall) {
+  console.log('Tool call:', toolCall);
+  const tool = toolCall?.tool;
+  const args = toolCall?.args || {};
+  const tab = await tabManager.getCurrentTab();
+  const tabId = tab?.id ?? null;
+
+  switch (tool) {
+    case 'get_page_snapshot': {
+      const snapshot = await pageContentManager.fetchPageSnapshot(tabId, args.options || {});
+      return { ok: !!snapshot, snapshot };
+    }
+    case 'perform_click': {
+      const target = args.target || args.selector || null;
+      return pageContentManager.performClick(tabId, target, args.options || {});
+    }
+    case 'perform_type': {
+      const target = args.target || args.selector || null;
+      return pageContentManager.performType(tabId, target, args.text, args.options || {});
+    }
+    default:
+      return { ok: false, error: `Unknown tool: ${tool}` };
+  }
+}
+
+function buildToolResultMessage(tool, result) {
+  const payload = {
+    tool,
+    result,
+  };
+  return `TOOL_RESULT: ${JSON.stringify(payload)}`;
+}
+
 async function getLLMResponse(userMessage) {
   // Show loading animation
   showLoading();
@@ -223,8 +329,26 @@ async function getLLMResponse(userMessage) {
     const pageContent = await pageContentManager.fetchContent(tabIds);
     
     // Fetch LLM response using the LLM client
-    const llmResponse = await llmClient.getResponse(userMessage, pageContent, messages);
-    
+    let llmResponse = await llmClient.getResponse(userMessage, pageContent, messages);
+
+    let toolStepCount = 0;
+    while (toolStepCount < MAX_TOOL_STEPS) {
+      const toolCall = parseToolCallFromText(llmResponse);
+      if (!toolCall) {
+        break;
+      }
+
+      const actionLabel = getToolActionLabel(toolCall);
+      if (actionLabel) {
+        chatView.displayToolAction(actionLabel);
+      }
+
+      const toolResult = await executeToolCall(toolCall);
+      const toolMessage = buildToolResultMessage(toolCall.tool, toolResult);
+      llmResponse = await llmClient.getResponse(toolMessage, pageContent, messages);
+      toolStepCount += 1;
+    }
+
     hideLoading();
     displayMessage(llmResponse, 'llm');
   } catch (error) {

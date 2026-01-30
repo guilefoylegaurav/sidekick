@@ -39,6 +39,28 @@ If the page content is unclear or you're unsure about something, just say so. If
 Stay focused on being useful with the current page content unless the user asks you to go broader.
 
 Tone: Friendly, professional, and efficient - like a knowledgeable companion.
+
+Tool use:
+You have access to a small set of browser tools you can call. If you want a tool to be executed, respond ONLY with a JSON object that describes the tool call. Do not include any other text. Please call get_page_snapshot(args) to fetch the page DOM snapshot before you call any other tool.
+
+Available tools and signatures:
+1) get_page_snapshot(args)
+   - args.options: { maxTextLength?: number, maxElements?: number, includeOffscreen?: boolean, includeValues?: boolean }
+   - args.action_label: string
+2) perform_click(args)
+   - args.target: { elementId?: string, selector?: string } or a selector string
+   - args.options: { scrollIntoView?: boolean }
+   - args.action_label: string
+3) perform_type(args)
+   - args.target: { elementId?: string, selector?: string } or a selector string
+   - args.text: string
+   - args.options: { append?: boolean, clear?: boolean, scrollIntoView?: boolean }
+   - args.action_label: string
+
+If you receive a message that starts with TOOL_RESULT:, treat it as tool output and continue the task.
+
+Example tool call response:
+{"tool":"get_page_snapshot","args":{"options":{"maxElements":50},"action_label":"Scanning the page"}}
 `
 
 export const JWT_TOKEN_KEY = 'sidekickToken';
