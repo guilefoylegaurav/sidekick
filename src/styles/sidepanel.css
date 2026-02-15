@@ -12,6 +12,24 @@ body {
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
+body,
+#header,
+.icon-button,
+.header-menu,
+.header-menu-item,
+.quick-action-btn,
+.message.user,
+.message.llm,
+#input-container,
+#user-input,
+#send-button,
+#clear-button,
+.empty-message,
+.empty-subtitle,
+.empty-icon {
+  transition: background-color 0.24s ease, color 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+}
+
 #app {
   display: flex;
   flex-direction: column;
@@ -61,6 +79,44 @@ body {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 8px;
+}
+
+.agent-session-indicator {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #dbeafe;
+  background: rgba(37, 99, 235, 0.2);
+  border: 1px solid rgba(147, 197, 253, 0.45);
+}
+
+.agent-session-indicator[data-active="true"] {
+  display: inline-flex;
+}
+
+.agent-session-indicator::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #93c5fd;
+  box-shadow: 0 0 0 0 rgba(147, 197, 253, 0.65);
+  animation: agent-session-pulse 1.4s ease-out infinite;
+}
+
+@keyframes agent-session-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(147, 197, 253, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 8px rgba(147, 197, 253, 0);
+  }
 }
 
 .icon-button {
@@ -577,6 +633,222 @@ body {
   margin: 0;
 }
 
+body.tool-session-active {
+  background: radial-gradient(160% 130% at 8% 4%, #ffffff 0%, #e0edff 34%, #d6e8ff 58%, #c9e4ff 100%);
+  background-size: 180% 180%;
+  color: #0f172a;
+  animation: agent-mode-background-pulse 2.4s ease-in-out infinite;
+}
+
+body.tool-session-active #app,
+body.tool-session-active #app * {
+  cursor: progress !important;
+}
+
+@keyframes agent-mode-background-pulse {
+  0%, 100% {
+    background-position: 0% 30%;
+  }
+  50% {
+    background-position: 100% 70%;
+  }
+}
+
+body.tool-session-active #header {
+  background: #e0eaff;
+  border-bottom-color: #93c5fd;
+  animation: agent-mode-header-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes agent-mode-header-pulse {
+  0%, 100% {
+    box-shadow: inset 0 -1px 0 rgba(59, 130, 246, 0.16), 0 0 0 rgba(56, 189, 248, 0);
+  }
+  50% {
+    box-shadow: inset 0 -1px 0 rgba(59, 130, 246, 0.4), 0 8px 18px rgba(56, 189, 248, 0.18);
+  }
+}
+
+body.tool-session-active #header h1,
+body.tool-session-active .message.llm,
+body.tool-session-active .header-menu-item,
+body.tool-session-active .tabs-menu-title {
+  color: #0f172a;
+}
+
+body.tool-session-active .agent-session-indicator {
+  color: #1e3a8a;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(37, 99, 235, 0.6);
+  box-shadow: 0 0 0 rgba(37, 99, 235, 0);
+  animation: agent-mode-pill-throb 0.95s ease-in-out infinite;
+}
+
+body.tool-session-active .agent-session-indicator::before {
+  background: #2563eb;
+}
+
+@keyframes agent-mode-pill-throb {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(37, 99, 235, 0);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.24);
+  }
+}
+
+body.tool-session-active .icon-button {
+  background: #f8fbff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+body.tool-session-active .icon-button:hover {
+  background: #e0ebff;
+  border-color: #93c5fd;
+}
+
+body.tool-session-active .header-menu {
+  background: rgba(246, 250, 255, 0.96);
+  border-color: #bfdbfe;
+  box-shadow: 0 16px 34px rgba(29, 78, 216, 0.14);
+}
+
+body.tool-session-active .header-menu-item:hover {
+  background: #dbeafe;
+}
+
+body.tool-session-active .quick-action-btn {
+  background: #eef4ff;
+  color: #1e3a8a;
+  border-color: #bfdbfe;
+}
+
+body.tool-session-active .quick-action-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+body.tool-session-active #messages::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+}
+
+body.tool-session-active .message.user {
+  background: #dbeafe;
+  color: #1e3a8a;
+  border-color: #93c5fd;
+}
+
+body.tool-session-active .message.llm blockquote {
+  border-left-color: #94a3b8;
+  color: #334155;
+}
+
+body.tool-session-active #input-container {
+  background: #e5e7eb;
+  border-color: #cbd5e1;
+  box-shadow: none;
+}
+
+body.tool-session-active #input-container::before {
+  opacity: 0 !important;
+  animation: none !important;
+}
+
+body.tool-session-active #user-input {
+  color: #4b5563;
+}
+
+body.tool-session-active #user-input::placeholder {
+  color: #9ca3af;
+}
+
+body.tool-session-active #send-button,
+body.tool-session-active #clear-button,
+body.tool-session-active .context-actions .icon-button {
+  color: #6b7280;
+}
+
+body.tool-session-active #send-button:hover,
+body.tool-session-active .context-actions .icon-button:hover {
+  background: #d1d5db !important;
+  border-color: #9ca3af !important;
+  color: #6b7280 !important;
+}
+
+body.tool-session-active #clear-button:hover {
+  background: #d1d5db !important;
+  border-color: #9ca3af !important;
+  color: #6b7280 !important;
+}
+
+body.tool-session-active :is(
+  #logout-button,
+  #tabs-selector-button,
+  #send-button,
+  #clear-button,
+  .quick-action-btn,
+  .copy-btn,
+  #user-input,
+  .header-menu-item
+) {
+  opacity: 0.46 !important;
+  filter: grayscale(1);
+}
+
+body.tool-session-active :is(
+  #logout-button,
+  #tabs-selector-button,
+  #send-button,
+  #clear-button,
+  .quick-action-btn,
+  .copy-btn,
+  #user-input,
+  .header-menu-item
+):hover {
+  background: #d1d5db !important;
+  border-color: #9ca3af !important;
+  color: #6b7280 !important;
+}
+
+body.tool-session-active .code-block {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+body.tool-session-active .code-header {
+  background: #e2e8f0;
+  border-bottom-color: #cbd5e1;
+  color: #334155;
+}
+
+body.tool-session-active .code-content {
+  color: #0f172a;
+}
+
+body.tool-session-active .copy-btn {
+  background: #d1d5db;
+  border-color: #9ca3af;
+  color: #6b7280;
+}
+
+body.tool-session-active .copy-btn:hover {
+  background: #d1d5db !important;
+  border-color: #9ca3af !important;
+  color: #6b7280 !important;
+}
+
+body.tool-session-active .empty-message {
+  color: #1e293b;
+}
+
+body.tool-session-active .empty-subtitle,
+body.tool-session-active .empty-icon {
+  color: #64748b;
+}
+
 /* Auth pages */
 
 #auth-container {
@@ -753,4 +1025,3 @@ body {
   border-color: #f59e0b;
   color: #ffffff;
 }
-

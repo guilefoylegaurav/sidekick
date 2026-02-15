@@ -14,6 +14,7 @@ const clearButton = document.getElementById('clear-button');
 const quickActionsContainer = document.getElementById('quick-actions');
 const tabsSelectorButton = document.getElementById('tabs-selector-button');
 const logoutButton = document.getElementById('logout-button');
+const agentSessionIndicator = document.getElementById('agent-session-indicator');
 
 let currentTabId = null;
 const chatStorage = new ChromeChatStorage();
@@ -29,6 +30,7 @@ const chatView = new ChatView({
   sendButton,
   clearButton,
   contextButton: tabsSelectorButton,
+  agentStatusElement: agentSessionIndicator,
   markdownRenderer,
 });
 
@@ -304,6 +306,7 @@ function wait(ms) {
 async function getLLMResponse(userMessage) {
   // Show loading animation
   showLoading();
+  chatView.setToolSessionState(false);
   
   try {
     // Get all prior messages from storage using the helper function
@@ -332,6 +335,12 @@ async function getLLMResponse(userMessage) {
         displayMessage(parsedResponse.assistantMessage || llmResponse, 'llm');
         return;
       }
+
+      chatView.setToolSessionState(true, {
+        step: step + 1,
+        maxSteps: maxToolSteps + 1,
+        toolName: parsedResponse.toolCall.name || '',
+      });
 
       const toolResult = await executeToolCall(parsedResponse.toolCall, tabIds);
       const toolMessage = formatToolExecutionMessage(parsedResponse.toolCall, toolResult);
@@ -372,6 +381,8 @@ async function getLLMResponse(userMessage) {
     hideLoading();
     console.error('Error getting LLM response:', error);
     displayMessage(`Whoops. Hit the rate limit. Try again after a few minutes maybe?`, 'llm');
+  } finally {
+    chatView.setToolSessionState(false);
   }
 }
 

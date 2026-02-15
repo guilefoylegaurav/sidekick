@@ -8,15 +8,16 @@ import { JWT_TOKEN_KEY } from "./constants.js";
  */
 export class ChatView {
   /**
-   * @param {{messagesContainer: HTMLElement, quickActionsContainer: HTMLElement|null, userInput: HTMLTextAreaElement, sendButton: HTMLButtonElement, clearButton: HTMLButtonElement, contextButton?: HTMLButtonElement|null, markdownRenderer: { formatMessageWithCode: (message: string, containerElement: HTMLElement | null) => string }}} deps
+   * @param {{messagesContainer: HTMLElement, quickActionsContainer: HTMLElement|null, userInput: HTMLTextAreaElement, sendButton: HTMLButtonElement, clearButton: HTMLButtonElement, contextButton?: HTMLButtonElement|null, agentStatusElement?: HTMLElement|null, markdownRenderer: { formatMessageWithCode: (message: string, containerElement: HTMLElement | null) => string }}} deps
    */
-  constructor({ messagesContainer, quickActionsContainer, userInput, sendButton, clearButton, contextButton = null, markdownRenderer }) {
+  constructor({ messagesContainer, quickActionsContainer, userInput, sendButton, clearButton, contextButton = null, agentStatusElement = null, markdownRenderer }) {
     this.messagesContainer = messagesContainer;
     this.quickActionsContainer = quickActionsContainer;
     this.userInput = userInput;
     this.sendButton = sendButton;
     this.clearButton = clearButton;
     this.contextButton = contextButton;
+    this.agentStatusElement = agentStatusElement;
     this.markdownRenderer = markdownRenderer;
     this._originalPlaceholder = userInput ? userInput.placeholder : '';
   }
@@ -133,6 +134,42 @@ export class ChatView {
       button.disabled = isDisabled;
       button.classList.toggle('disabled', isDisabled);
     });
+  }
+
+  /**
+   * Toggle visual "agent mode" state while tool calls are being executed.
+   * @param {boolean} isActive
+   * @param {{step?: number, maxSteps?: number, toolName?: string}} [meta]
+   */
+  setToolSessionState(isActive, meta = {}) {
+    const appRoot = document.getElementById('app');
+    if (appRoot) {
+      appRoot.inert = !!isActive;
+    }
+
+    document.body.classList.toggle('tool-session-active', !!isActive);
+
+    if (!this.agentStatusElement) {
+      return;
+    }
+
+    if (!isActive) {
+      this.agentStatusElement.dataset.active = 'false';
+      this.agentStatusElement.hidden = true;
+      this.agentStatusElement.setAttribute('aria-hidden', 'true');
+      this.agentStatusElement.textContent = '';
+      return;
+    }
+
+    const step = typeof meta.step === 'number' ? `Step ${meta.step} | ` : 'Running';
+    const toolName = typeof meta.toolName === 'string' && meta.toolName.trim().length > 0
+      ? ` · ${meta.toolName.trim()}`
+      : '';
+
+    this.agentStatusElement.textContent = `Agent mode ${step}${toolName}`;
+    this.agentStatusElement.dataset.active = 'true';
+    this.agentStatusElement.hidden = false;
+    this.agentStatusElement.setAttribute('aria-hidden', 'false');
   }
 
   /**
@@ -447,4 +484,3 @@ export class LogoutButtonController {
     });
   }
 }
-
