@@ -1,5 +1,5 @@
-// PageContentManager is responsible for fetching page content
-// for given tab IDs.
+// PageContentManager is responsible for fetching structured page snapshots
+// and context payloads for given tab IDs.
 
 import { YouTubeClient } from './api.js';
 
@@ -9,61 +9,74 @@ export class PageContentManager {
   }
 
   /**
-   * Fetch page content for a specific tab or the current active tab.
-   * @param {number|null} [tabId] - Optional tab ID to fetch content for.
-   * @returns {Promise<string>} - The page content (may be empty string).
+   * Capture a structured page snapshot for agentic actions.
+   * @param {number|null} [tabId] - Optional tab ID to snapshot.
+   * @returns {Promise<{url: string, title: string, pageText: string, interactables: Array<object>, generatedAt: number} | null>}
    */
-  async fetchPageContent(tabId = null) {
-    console.log("Fetching page content for tab:", tabId);
-    return new Promise((resolve) => {
-      const message = { action: 'requestPageContent' };
-      if (tabId !== null && tabId !== undefined) {
-        message.tabId = tabId;
-      }
+  async fetchSnapshot(tabId = null) {
+    console.log('Fetching page snapshot for tab:', tabId);
+    const response = await this._sendRuntimeMessage({ action: 'requestPageSnapshot', tabId });
+    return response?.snapshot || null;
+  }
 
-      chrome.runtime.sendMessage(message, (response) => {
-        if (chrome.runtime.lastError) {
-          console.warn("Runtime error fetching content:", chrome.runtime.lastError.message);
-          resolve('');
-          return;
-        }
-        
-        if (response && typeof response.content === 'string') {
-          resolve(response.content);
-        } else {
-          resolve('');
-        }
-      });
+  /**
+   * Fill an input-like element by the elementId from a page snapshot.
+   * @param {{tabId?: number|null, elementId: string, value: string, clearFirst?: boolean}} params
+   * @returns {Promise<{ok: boolean, error?: string, elementId?: string, value?: string}>}
+   */
+  async fillInput({ tabId = null, elementId, value, clearFirst = true }) {
+    return this._sendRuntimeMessage({
+      action: 'executeFillInput',
+      tabId,
+      elementId,
+      value,
+      clearFirst,
     });
   }
 
   /**
-   * Fetch page content for multiple tabs.
-   * @param {number[]} tabIds - Array of tab IDs to fetch content for.
-   * @returns {Promise<Array<{tabId: number, title: string, content: string}>>} - Array of tab content objects.
+   * Click an element by the elementId from a page snapshot.
+   * @param {{tabId?: number|null, elementId: string, waitMs?: number}} params
+   * @returns {Promise<{ok: boolean, error?: string, elementId?: string, tag?: string}>}
    */
-  async fetchMultipleTabsContent(tabIds) {
-    console.log("Fetching page content for tabs:", tabIds);
-    
+  async clickElement({ tabId = null, elementId, waitMs }) {
+    return this._sendRuntimeMessage({
+      action: 'executeClickElement',
+      tabId,
+      elementId,
+      waitMs,
+    });
+  }
+
+  /**
+   * Fetch page snapshots for multiple tabs.
+   * @param {number[]} tabIds - Array of tab IDs to fetch snapshots for.
+   * @returns {Promise<Array<{tabId: number, title: string, url: string, snapshot: object|null, status: string}>>}
+   */
+  async fetchSnapshotsForTabs(tabIds) {
+    console.log('Fetching page snapshots for tabs:', tabIds);
+
     if (!Array.isArray(tabIds) || tabIds.length === 0) {
       return [];
     }
 
-    const tabContents = [];
+    const tabSnapshots = [];
 
     // Get tab information for all requested tabs
     const tabs = await this._getTabsInfo(tabIds);
 
-    // Fetch content from each tab
+    // Fetch snapshot from each tab
     for (const tab of tabs) {
       try {
         // Check if we can access this tab (skip chrome:// and other restricted URLs)
         if (this._isRestrictedUrl(tab.url)) {
           console.log(`Skipping restricted tab ${tab.id}: ${tab.url}`);
-          tabContents.push({
+          tabSnapshots.push({
             tabId: tab.id,
             title: tab.title || 'Untitled',
-            content: '[Content not accessible - restricted URL]'
+            url: tab.url || '',
+            snapshot: null,
+            status: 'restricted_url',
           });
           continue;
         }
@@ -77,14 +90,23 @@ export class PageContentManager {
             const description = videoData?.description || '';
             const transcriptionAsText = videoData?.transcriptionAsText || '';
 
-            tabContents.push({
+            tabSnapshots.push({
               tabId: tab.id,
               title: tab.title || 'Untitled',
-              content: [
-                `YouTube: ${tab.title || 'Untitled'}`,
-                description ? `Description:\n${description}` : '',
-                transcriptionAsText ? `Transcript:\n${transcriptionAsText}` : '',
-              ].filter(Boolean).join('\n\n')
+              url: tab.url || '',
+              snapshot: {
+                url: tab.url || '',
+                title: tab.title || 'Untitled',
+                pageText: [
+                  description ? `Description:\n${description}` : '',
+                  transcriptionAsText ? `Transcript:\n${transcriptionAsText}` : '',
+                ]
+                  .filter(Boolean)
+                  .join('\n\n'),
+                interactables: [],
+                generatedAt: Date.now(),
+              },
+              status: 'ok',
             });
             continue;
           }
@@ -92,61 +114,82 @@ export class PageContentManager {
 
         // Try to inject content script if needed
         const injectionSuccess = await this._injectContentScriptIfNeeded(tab.id);
-        
+
         if (!injectionSuccess) {
           console.warn(`Could not inject content script into tab ${tab.id}`);
-          tabContents.push({
+          tabSnapshots.push({
             tabId: tab.id,
             title: tab.title || 'Untitled',
-            content: '[Content not accessible - injection failed]'
+            url: tab.url || '',
+            snapshot: null,
+            status: 'injection_failed',
           });
           continue;
         }
 
         // Wait a brief moment for the content script to initialize
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
-        const content = await this.fetchPageContent(tab.id);
-        console.log("Content fetched from tab:", tab.id, content ? `${content.length} characters` : 'empty');
-        tabContents.push({
+        const snapshot = await this.fetchSnapshot(tab.id);
+        console.log(
+          'Snapshot fetched from tab:',
+          tab.id,
+          snapshot?.interactables ? `${snapshot.interactables.length} interactables` : 'empty'
+        );
+        tabSnapshots.push({
           tabId: tab.id,
           title: tab.title || 'Untitled',
-          content: content || '[No content available]'
+          url: tab.url || '',
+          snapshot,
+          status: snapshot ? 'ok' : 'empty',
         });
       } catch (error) {
-        console.error(`Error fetching content from tab ${tab.id}:`, error);
-        tabContents.push({
+        console.error(`Error fetching snapshot from tab ${tab.id}:`, error);
+        tabSnapshots.push({
           tabId: tab.id,
           title: tab.title || 'Untitled',
-          content: '[Error accessing content]'
+          url: tab.url || '',
+          snapshot: null,
+          status: 'error',
         });
       }
     }
 
-    return tabContents;
+    return tabSnapshots;
   }
 
   /**
-   * Fetch and combine page content from multiple tabs into a single string.
-   * @param {number[]} tabIds - Array of tab IDs to fetch content for.
-   * @returns {Promise<string>} - Combined content from all tabs.
+   * Fetch and serialize page snapshots from multiple tabs into a single prompt context string.
+   * @param {number[]} tabIds - Array of tab IDs to fetch snapshots for.
+   * @returns {Promise<string>} - Snapshot context for the LLM prompt.
    */
-  async fetchContent(tabIds) {
-    const tabContents = await this.fetchMultipleTabsContent(tabIds);
-    
-    if (tabContents.length === 0) {
+  async fetchSnapshotsContext(tabIds) {
+    const tabSnapshots = await this.fetchSnapshotsForTabs(tabIds);
+
+    if (tabSnapshots.length === 0) {
       return '';
     }
 
-    // Combine content from all tabs with clear separators
-    const combinedContent = tabContents
-      .map((tab, index) => {
-        return tab.content;
+    const context = tabSnapshots
+      .map((tab) => {
+        const safeSnapshot = tab.snapshot || {
+          url: tab.url || '',
+          title: tab.title || '',
+          pageText: '',
+          interactables: [],
+          generatedAt: Date.now(),
+        };
+
+        return [
+          `Tab ${tab.tabId}: ${tab.title || 'Untitled'}`,
+          `Status: ${tab.status}`,
+          JSON.stringify(safeSnapshot),
+        ].join('\n');
       })
       .join('\n\n');
 
-    console.log(`Combined content from ${tabContents.length} tabs:`, combinedContent.substring(0, 200) + "...");
-    return combinedContent;
+    console.log(`Combined snapshots from ${tabSnapshots.length} tabs:`, `${context.substring(0, 200)}...`);
+    return context;
   }
 
   /**
@@ -158,11 +201,11 @@ export class PageContentManager {
   async _getTabsInfo(tabIds) {
     return new Promise((resolve) => {
       chrome.tabs.query({}, (allTabs) => {
-        const requestedTabs = allTabs.filter(tab => tabIds.includes(tab.id));
-        const tabsInfo = requestedTabs.map(tab => ({
+        const requestedTabs = allTabs.filter((tab) => tabIds.includes(tab.id));
+        const tabsInfo = requestedTabs.map((tab) => ({
           id: tab.id,
           title: tab.title || 'Untitled',
-          url: tab.url || ''
+          url: tab.url || '',
         }));
         resolve(tabsInfo);
       });
@@ -177,10 +220,12 @@ export class PageContentManager {
    */
   _isRestrictedUrl(url) {
     if (!url) return false;
-    return url.startsWith('chrome://') || 
-           url.startsWith('chrome-extension://') || 
-           url.startsWith('edge://') || 
-           url.startsWith('about:');
+    return (
+      url.startsWith('chrome://') ||
+      url.startsWith('chrome-extension://') ||
+      url.startsWith('edge://') ||
+      url.startsWith('about:')
+    );
   }
 
   /**
@@ -257,16 +302,41 @@ export class PageContentManager {
       }
 
       // Content script not present, try to inject it
-      console.log("Injecting content script into tab:", tabId);
+      console.log('Injecting content script into tab:', tabId);
       await chrome.scripting.executeScript({
         target: { tabId: tabId },
-        files: ['src/scripts/contentScript.js']
+        files: ['src/scripts/contentScript.js'],
       });
 
       return true;
     } catch (error) {
-      console.warn("Could not inject content script into tab", tabId, ":", error.message);
+      console.warn('Could not inject content script into tab', tabId, ':', error.message);
       return false;
     }
+  }
+
+  /**
+   * Send a runtime message and normalize error handling.
+   * @private
+   * @param {Record<string, any>} message
+   * @returns {Promise<any>}
+   */
+  async _sendRuntimeMessage(message) {
+    return new Promise((resolve) => {
+      const payload = { ...message };
+
+      if (payload.tabId === null || payload.tabId === undefined) {
+        delete payload.tabId;
+      }
+
+      chrome.runtime.sendMessage(payload, (response) => {
+        if (chrome.runtime.lastError) {
+          resolve({ ok: false, error: chrome.runtime.lastError.message });
+          return;
+        }
+
+        resolve(response || { ok: false, error: 'No response from runtime' });
+      });
+    });
   }
 }

@@ -186,6 +186,121 @@ function clearConversation(force = false) {
   }
 }
 
+function normalizeToolName(name) {
+  if (typeof name !== 'string') {
+    return '';
+  }
+  return name.trim().toLowerCase();
+}
+
+function resolveToolTabId(toolArgs, selectedTabIds) {
+  if (toolArgs && typeof toolArgs.tabId === 'number') {
+    return toolArgs.tabId;
+  }
+
+  if (Array.isArray(selectedTabIds) && selectedTabIds.length > 0 && typeof selectedTabIds[0] === 'number') {
+    return selectedTabIds[0];
+  }
+
+  if (typeof currentTabId === 'number') {
+    return currentTabId;
+  }
+
+  return null;
+}
+
+async function executeToolCall(toolCall, selectedTabIds) {
+  const toolName = normalizeToolName(toolCall?.name);
+  const toolArgs = (toolCall && toolCall.arguments && typeof toolCall.arguments === 'object')
+    ? toolCall.arguments
+    : {};
+
+  const targetTabId = resolveToolTabId(toolArgs, selectedTabIds);
+
+  switch (toolName) {
+    case 'get_page_snapshot':
+    case 'page_snapshot': {
+      const snapshot = await pageContentManager.fetchSnapshot(targetTabId);
+      return {
+        ok: !!snapshot,
+        toolName,
+        snapshot,
+        targetTabId,
+        error: snapshot ? undefined : 'Snapshot was empty',
+      };
+    }
+    case 'fill_input':
+    case 'fillinput': {
+      const elementId = typeof toolArgs.elementId === 'string' ? toolArgs.elementId : '';
+      const value = typeof toolArgs.value === 'string' ? toolArgs.value : String(toolArgs.value ?? '');
+      const clearFirst = toolArgs.clearFirst !== false;
+
+      if (!elementId) {
+        return { ok: false, toolName, error: 'fill_input requires elementId' };
+      }
+
+      return pageContentManager.fillInput({
+        tabId: targetTabId,
+        elementId,
+        value,
+        clearFirst,
+      });
+    }
+    case 'click_element':
+    case 'click': {
+      const elementId = typeof toolArgs.elementId === 'string' ? toolArgs.elementId : '';
+      const waitMs = typeof toolArgs.waitMs === 'number' ? toolArgs.waitMs : undefined;
+
+      if (!elementId) {
+        return { ok: false, toolName, error: 'click_element requires elementId' };
+      }
+
+      return pageContentManager.clickElement({
+        tabId: targetTabId,
+        elementId,
+        waitMs,
+      });
+    }
+    default:
+      return {
+        ok: false,
+        toolName,
+        error: `Unsupported tool: ${toolCall?.name || 'unknown'}`,
+      };
+  }
+}
+
+function formatToolExecutionMessage(toolCall, toolResult) {
+  const toolName = toolCall?.name || 'unknown_tool';
+  if (!toolResult || toolResult.ok === false) {
+    return `Tool call failed for ${toolName}: ${toolResult?.error || 'Unknown error'}`;
+  }
+
+  const normalizedName = normalizeToolName(toolName);
+  if (normalizedName === 'get_page_snapshot' || normalizedName === 'page_snapshot') {
+    const interactableCount = Array.isArray(toolResult.snapshot?.interactables)
+      ? toolResult.snapshot.interactables.length
+      : 0;
+    return `Captured page snapshot successfully (${interactableCount} interactable elements).`;
+  }
+
+  if (normalizedName === 'fill_input' || normalizedName === 'fillinput') {
+    return `Filled input for elementId=${toolResult.elementId || 'unknown'}.`;
+  }
+
+  if (normalizedName === 'click_element' || normalizedName === 'click') {
+    return `Clicked elementId=${toolResult.elementId || 'unknown'}.`;
+  }
+
+  return `Tool ${toolName} executed successfully.`;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 async function getLLMResponse(userMessage) {
   // Show loading animation
   showLoading();
@@ -194,20 +309,65 @@ async function getLLMResponse(userMessage) {
     // Get all prior messages from storage using the helper function
     const messages = await getSavedMessages();
 
-    const tabIds = tabsSelectionController.getSelectedTabIds();
+    let tabIds = tabsSelectionController.getSelectedTabIds();
 
     if (tabIds.length > 10) {
       confirm('You can choose at most ten tabs. Taking the first ten tabs selected.');
       tabIds = tabIds.slice(0, 10);
     }
 
-    const pageContent = await pageContentManager.fetchContent(tabIds);
-    
-    // Fetch LLM response using the LLM client
-    const llmResponse = await llmClient.getResponse(userMessage, pageContent, messages);
-    
-    hideLoading();
-    displayMessage(llmResponse, 'llm');
+    const maxToolSteps = 5;
+    const toolExecutionHistory = [];
+    let nextUserMessage = userMessage;
+
+    for (let step = 0; step <= maxToolSteps; step++) {
+      const pageSnapshotsContext = await pageContentManager.fetchSnapshotsContext(tabIds);
+
+      // Fetch LLM response using the LLM client
+      const llmResponse = await llmClient.getResponse(nextUserMessage, pageSnapshotsContext, messages);
+      const parsedResponse = llmClient.parseModelResponse(llmResponse);
+
+      if (!parsedResponse.toolCall) {
+        hideLoading();
+        displayMessage(parsedResponse.assistantMessage || llmResponse, 'llm');
+        return;
+      }
+
+      const toolResult = await executeToolCall(parsedResponse.toolCall, tabIds);
+      const toolMessage = formatToolExecutionMessage(parsedResponse.toolCall, toolResult);
+
+      toolExecutionHistory.push({
+        toolCall: parsedResponse.toolCall,
+        toolResult,
+        toolMessage,
+      });
+
+      // If tool execution fails, stop the loop and report immediately.
+      if (!toolResult || toolResult.ok === false) {
+        hideLoading();
+        displayMessage(toolMessage, 'llm');
+        return;
+      }
+
+      if (step === maxToolSteps) {
+        hideLoading();
+        displayMessage('Reached the tool execution limit before finishing. Try again with a narrower request.', 'llm');
+        return;
+      }
+
+      const toolHistoryPayload = JSON.stringify(toolExecutionHistory);
+      nextUserMessage = [
+        `Original user intent: ${userMessage}`,
+        `Tool execution history (latest included): ${toolHistoryPayload}`,
+        'Continue the task based on these tool results.',
+        'If another browser action is required, return ONLY valid JSON in this format:',
+        '{"tool_call":{"name":"<tool_name>","arguments":{...}}}',
+        'If no more tools are needed, return the final response to the user in plain text.',
+      ].join('\n\n');
+
+      // Give the page some time to load/update before next agent step.
+      await wait(2000);
+    }
   } catch (error) {
     hideLoading();
     console.error('Error getting LLM response:', error);
