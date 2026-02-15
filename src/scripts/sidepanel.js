@@ -54,9 +54,6 @@ const tabManager = new TabManager({
     chatView.clearMessages();
     loadTabData();
   },
-  onTabRefreshed: () => {
-    handleTabRefresh();
-  }
 });
 
 // Tabs selector controller for header menu
@@ -87,17 +84,6 @@ tabManager.onActiveTabChange = () => {
   tabsSelectionController.closeDropdown();
 
   // Update tabs selection controller for tab switches
-  if (currentTabId !== null) {
-    tabsSelectionController.setSelectedTabIds([currentTabId]);
-  }
-};
-
-// Update onTabRefreshed to close dropdown and update TabsSelectionController
-tabManager.onTabRefreshed = () => {
-  handleTabRefresh();
-  // Close any open dropdown on tab refresh
-  tabsSelectionController.closeDropdown();
-  // Update tabs selection controller
   if (currentTabId !== null) {
     tabsSelectionController.setSelectedTabIds([currentTabId]);
   }
@@ -198,11 +184,6 @@ function clearConversation(force = false) {
     // Show empty state and quick actions
     showEmptyState();
   }
-}
-
-function handleTabRefresh() {
-  // Clear conversation without confirmation
-  clearConversation(true);
 }
 
 async function getLLMResponse(userMessage) {
