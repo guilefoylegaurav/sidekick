@@ -7,6 +7,91 @@ async function openSidePanelForTab(tab) {
   await chrome.sidePanel.open({ tabId: tab.id });
 }
 
+function normalizeErrorMessage(message) {
+  return String(message || '').toLowerCase();
+}
+
+function isMissingReceiverError(errorMessage) {
+  const normalized = normalizeErrorMessage(errorMessage);
+  return normalized.includes('receiving end does not exist');
+}
+
+function isPageLifecycleError(errorMessage) {
+  const normalized = normalizeErrorMessage(errorMessage);
+  return (
+    normalized.includes('moved into back/forward cache') ||
+    normalized.includes('message channel is closed') ||
+    normalized.includes('frame was removed') ||
+    normalized.includes('document unloaded')
+  );
+}
+
+function waitForTabToStabilize(tabId, timeoutMs = 3500) {
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      chrome.tabs.onUpdated.removeListener(onUpdated);
+      clearTimeout(timeoutId);
+      resolve();
+    };
+
+    const onUpdated = (updatedTabId, changeInfo) => {
+      if (updatedTabId !== tabId) return;
+      if (changeInfo.status === 'complete') {
+        finish();
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      finish();
+    }, timeoutMs);
+
+    chrome.tabs.onUpdated.addListener(onUpdated);
+
+    chrome.tabs.get(tabId, (tab) => {
+      if (chrome.runtime.lastError) {
+        finish();
+        return;
+      }
+
+      if (!tab || tab.status === 'complete') {
+        finish();
+      }
+    });
+  });
+}
+
+function retryMessageAfterInjection(tabId, message, sendResponse, responseTransformer = (response) => response) {
+  waitForTabToStabilize(tabId).then(() => {
+    chrome.scripting.executeScript(
+      {
+        target: { tabId },
+        files: ['src/scripts/contentScript.js'],
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          console.warn('Error injecting content script into tab', tabId, ':', chrome.runtime.lastError.message);
+          sendResponse({ ok: false, error: chrome.runtime.lastError.message });
+          return;
+        }
+
+        chrome.tabs.sendMessage(tabId, message, (retryResponse) => {
+          if (chrome.runtime.lastError) {
+            console.warn('Error sending retry message to tab', tabId, ':', chrome.runtime.lastError.message);
+            sendResponse({ ok: false, error: chrome.runtime.lastError.message });
+            return;
+          }
+
+          sendResponse(responseTransformer(retryResponse || {}));
+        });
+      }
+    );
+  });
+}
+
 function resolveTargetTabId(requestedTabId, callback) {
   if (typeof requestedTabId === 'number') {
     callback(requestedTabId);
@@ -23,7 +108,13 @@ function resolveTargetTabId(requestedTabId, callback) {
   });
 }
 
-function sendMessageToTab(tabId, message, sendResponse, responseTransformer = (response) => response) {
+function sendMessageToTab(
+  tabId,
+  message,
+  sendResponse,
+  responseTransformer = (response) => response,
+  options = {}
+) {
   if (typeof tabId !== 'number') {
     sendResponse({ ok: false, error: 'No target tab available' });
     return;
@@ -32,33 +123,30 @@ function sendMessageToTab(tabId, message, sendResponse, responseTransformer = (r
   chrome.tabs.sendMessage(tabId, message, (response) => {
     if (chrome.runtime.lastError) {
       const errorMessage = chrome.runtime.lastError.message || 'Unknown tab messaging error';
-      const hasReceiverError = errorMessage.includes('Receiving end does not exist');
+      const hasReceiverError = isMissingReceiverError(errorMessage);
+      const hasPageLifecycleError = isPageLifecycleError(errorMessage);
 
       if (hasReceiverError) {
-        // Retry once after injecting the content script.
-        chrome.scripting.executeScript(
-          {
-            target: { tabId },
-            files: ['src/scripts/contentScript.js'],
-          },
-          () => {
-            if (chrome.runtime.lastError) {
-              console.warn('Error injecting content script into tab', tabId, ':', chrome.runtime.lastError.message);
-              sendResponse({ ok: false, error: chrome.runtime.lastError.message });
-              return;
-            }
+        retryMessageAfterInjection(tabId, message, sendResponse, responseTransformer);
+        return;
+      }
 
-            chrome.tabs.sendMessage(tabId, message, (retryResponse) => {
-              if (chrome.runtime.lastError) {
-                console.warn('Error sending retry message to tab', tabId, ':', chrome.runtime.lastError.message);
-                sendResponse({ ok: false, error: chrome.runtime.lastError.message });
-                return;
-              }
+      if (hasPageLifecycleError) {
+        // Clicks that navigate can close the old message channel before a response arrives.
+        // Avoid retrying click to prevent duplicate submits/navigations.
+        if (options.allowNavigationSuccess) {
+          sendResponse(
+            responseTransformer({
+              ok: true,
+              elementId: message.elementId,
+              navigated: true,
+              info: 'Page transitioned during click; assuming click initiated navigation.',
+            })
+          );
+          return;
+        }
 
-              sendResponse(responseTransformer(retryResponse || {}));
-            });
-          }
-        );
+        retryMessageAfterInjection(tabId, message, sendResponse, responseTransformer);
         return;
       }
 
@@ -71,9 +159,9 @@ function sendMessageToTab(tabId, message, sendResponse, responseTransformer = (r
   });
 }
 
-function handleRoutedTabMessage(request, sendResponse, tabMessage, responseTransformer) {
+function handleRoutedTabMessage(request, sendResponse, tabMessage, responseTransformer, options = {}) {
   resolveTargetTabId(request.tabId, (tabId) => {
-    sendMessageToTab(tabId, tabMessage, sendResponse, responseTransformer);
+    sendMessageToTab(tabId, tabMessage, sendResponse, responseTransformer, options);
   });
 }
 
@@ -87,7 +175,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       request,
       sendResponse,
       { action: 'getPageContent' },
-      (response) => ({ content: typeof response.content === 'string' ? response.content : '' })
+      (response) => ({ content: typeof response.content === 'string' ? response.content : '' }),
+      {}
     );
     return true;
   }
@@ -97,7 +186,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       request,
       sendResponse,
       { action: 'getPageSnapshot' },
-      (response) => ({ snapshot: response.snapshot || null })
+      (response) => ({ snapshot: response.snapshot || null }),
+      {}
     );
     return true;
   }
@@ -111,7 +201,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         elementId: request.elementId,
         value: request.value,
         clearFirst: request.clearFirst,
-      }
+      },
+      (response) => response,
+      {}
     );
     return true;
   }
@@ -124,7 +216,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         action: 'clickElement',
         elementId: request.elementId,
         waitMs: request.waitMs,
-      }
+      },
+      (response) => response,
+      { allowNavigationSuccess: true }
     );
     return true;
   }
